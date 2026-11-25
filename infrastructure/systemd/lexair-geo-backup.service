@@ -1,0 +1,9 @@
+[Unit]
+Description=LEXAIR GEO copia de seguridad diaria
+After=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/lexair-geo/current/scripts/backup_lexair_geo.sh --quiet
+Nice=10
+IOSchedulingClass=idle

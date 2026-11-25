@@ -1,0 +1,25 @@
+[Unit]
+Description=LEXAIR GEO servidor de mosaicos (MBTiles)
+After=network-online.target
+
+[Service]
+Type=simple
+User=lexair
+Group=lexair
+WorkingDirectory=/opt/lexair-geo/current/tile_service
+Environment=MAP_DIR=/srv/lexair-geo/maps/current
+Environment=HOST=127.0.0.1
+Environment=PORT=8081
+ExecStart=/opt/lexair-geo/node/bin/node --max-old-space-size=192 src/server.mjs
+Restart=on-failure
+RestartSec=3
+MemoryMax=400M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/srv/lexair-geo
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

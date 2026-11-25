@@ -1,0 +1,5 @@
+{
+  "serverUrl": "https://geo.internal",
+  "healthPollSeconds": 15,
+  "caCertificatePath": "C:\\ProgramData\\LexairGeo\\lexair-geo-ca.crt"
+}

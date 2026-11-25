@@ -1,0 +1,29 @@
+[Unit]
+Description=LEXAIR GEO API (Fastify)
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=lexair
+Group=lexair
+WorkingDirectory=/opt/lexair-geo/current/api
+EnvironmentFile=/etc/lexair-geo/api.env
+ExecStart=/opt/lexair-geo/node/bin/node --max-old-space-size=512 dist/index.js
+Restart=on-failure
+RestartSec=3
+MemoryMax=900M
+LimitNOFILE=65536
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/lexair-geo
+ReadOnlyPaths=/srv/lexair-geo
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
