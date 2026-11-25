@@ -1,0 +1,14 @@
+{
+  "name": "lexair-synthetic-test",
+  "version": "test-0",
+  "generatedAt": "2026-11-25T00:00:00Z",
+  "isSynthetic": true,
+  "source": { "name": "Fixture sintético de pruebas", "timestamp": null },
+  "attribution": "Datos sintéticos de prueba — no es cartografía real",
+  "license": "Interno",
+  "bounds": [-80.7, 21.9, -79.2, 23.3],
+  "minzoom": 0,
+  "maxzoom": 4,
+  "styles": [{ "id": "standard", "name": "Estándar (sintético)", "file": "standard.mbtiles", "kind": "standard" }],
+  "missingFeatures": ["Fixture sintético: sin datos geográficos reales"]
+}
