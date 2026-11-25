@@ -1,0 +1,308 @@
+{
+  "virtualUsers": 30,
+  "durationS": 120.255,
+  "totalRequests": 13124,
+  "rps": 109.1,
+  "errors": 0,
+  "scenarios": {
+    "proximity": {
+      "requests": 3908,
+      "errors": 0,
+      "p50": 326.1,
+      "p95": 443.7,
+      "p99": 508.3,
+      "max": 789
+    },
+    "search_name": {
+      "requests": 1972,
+      "errors": 0,
+      "p50": 655.7,
+      "p95": 948.2,
+      "p99": 1045,
+      "max": 1202
+    },
+    "search_code": {
+      "requests": 2019,
+      "errors": 0,
+      "p50": 78.2,
+      "p95": 142.6,
+      "p99": 179.7,
+      "max": 231
+    },
+    "person_detail": {
+      "requests": 1233,
+      "errors": 0,
+      "p50": 69.4,
+      "p95": 125.1,
+      "p99": 158.7,
+      "max": 208
+    },
+    "geocode": {
+      "requests": 1324,
+      "errors": 0,
+      "p50": 108,
+      "p95": 185.4,
+      "p99": 235.7,
+      "max": 374.7
+    },
+    "map_points": {
+      "requests": 1990,
+      "errors": 0,
+      "p50": 163.5,
+      "p95": 282.6,
+      "p99": 351.4,
+      "max": 432.2
+    },
+    "group_filter": {
+      "requests": 678,
+      "errors": 0,
+      "p50": 383.5,
+      "p95": 669.3,
+      "p99": 777,
+      "max": 928.6
+    }
+  },
+  "apiMemory": [
+    {
+      "t": 1795627507995,
+      "rssMb": 117,
+      "heapUsedMb": 24,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 6
+      }
+    },
+    {
+      "t": 1795627512835,
+      "rssMb": 124,
+      "heapUsedMb": 30,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627517877,
+      "rssMb": 126,
+      "heapUsedMb": 29,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627522832,
+      "rssMb": 129,
+      "heapUsedMb": 39,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627527848,
+      "rssMb": 131,
+      "heapUsedMb": 38,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627532881,
+      "rssMb": 131,
+      "heapUsedMb": 31,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 12
+      }
+    },
+    {
+      "t": 1795627537889,
+      "rssMb": 132,
+      "heapUsedMb": 32,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627542843,
+      "rssMb": 132,
+      "heapUsedMb": 37,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627547905,
+      "rssMb": 132,
+      "heapUsedMb": 38,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627552870,
+      "rssMb": 133,
+      "heapUsedMb": 31,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 13
+      }
+    },
+    {
+      "t": 1795627557850,
+      "rssMb": 134,
+      "heapUsedMb": 38,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 13
+      }
+    },
+    {
+      "t": 1795627562846,
+      "rssMb": 134,
+      "heapUsedMb": 30,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627567876,
+      "rssMb": 133,
+      "heapUsedMb": 31,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627572837,
+      "rssMb": 133,
+      "heapUsedMb": 31,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627577888,
+      "rssMb": 133,
+      "heapUsedMb": 30,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627582875,
+      "rssMb": 133,
+      "heapUsedMb": 28,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627587883,
+      "rssMb": 134,
+      "heapUsedMb": 36,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627592876,
+      "rssMb": 134,
+      "heapUsedMb": 36,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627597846,
+      "rssMb": 134,
+      "heapUsedMb": 27,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627602911,
+      "rssMb": 134,
+      "heapUsedMb": 25,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627607860,
+      "rssMb": 134,
+      "heapUsedMb": 33,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 13
+      }
+    },
+    {
+      "t": 1795627612854,
+      "rssMb": 134,
+      "heapUsedMb": 28,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627617880,
+      "rssMb": 134,
+      "heapUsedMb": 38,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 14
+      }
+    },
+    {
+      "t": 1795627622822,
+      "rssMb": 134,
+      "heapUsedMb": 32,
+      "pool": {
+        "total": 16,
+        "idle": 0,
+        "waiting": 8
+      }
+    }
+  ],
+  "finishedAt": "2026-11-25T17:27:03.039Z"
+}
