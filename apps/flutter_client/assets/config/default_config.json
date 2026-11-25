@@ -1,0 +1,5 @@
+{
+  "serverUrl": "https://geo.internal",
+  "caCertificatePath": null,
+  "healthPollSeconds": 15
+}

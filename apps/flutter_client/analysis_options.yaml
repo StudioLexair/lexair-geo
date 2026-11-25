@@ -1,0 +1,30 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
+  errors:
+    missing_return: error
+    dead_code: warning
+    # Flutter 3.47+ marca package:flutter/material.dart como obsoleta en favor
+    # de package:material_ui. Se mantiene a propósito: flutter_map 8.3.2 y
+    # file_picker usan package:flutter/material.dart y ambas bibliotecas
+    # tienen tipos Theme distintos. Efecto secundario: también oculta otros
+    # avisos de obsolescencia; revisarlos al actualizar Flutter.
+    deprecated_member_use: ignore
+  exclude:
+    - build/**
+    - web/**
+    - windows/**
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_print
+    - prefer_const_constructors
+    - prefer_final_locals
+    - prefer_single_quotes
+    - sort_child_properties_last
+    - unawaited_futures
+    - use_build_context_synchronously
