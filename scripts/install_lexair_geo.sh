@@ -87,7 +87,7 @@ ok()   { echo "  ✓ $*"; }
 warn() { echo "  ! $*"; }
 die()  { echo "  ✗ $*" >&2; exit 1; }
 psql_su() { sudo -u postgres psql -v ON_ERROR_STOP=1 -qAt "$@"; }
-secret() { openssl rand -base64 48 | tr -d '\n/+=' | cut -c1-"${1:-40}"; }
+secret() { openssl rand -base64 96 | tr -d '\n/+=' | cut -c1-"${1:-40}"; }  # 96 bytes = 128 car. antes de filtrar
 
 # ---------------------------------------------------------------------------
 step 1 "Comprobaciones previas"

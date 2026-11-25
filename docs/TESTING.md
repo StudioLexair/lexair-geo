@@ -147,9 +147,9 @@ Las cifras completas y la revisión visual están en
 
 | Prueba | Estado |
 |---|---|
-| Compilación web de Flutter (`--no-wasm-dry-run`) | pendiente |
-| Navegadores actuales (Chromium) | pendiente |
-| Firefox 85 (cliente heredado) | pendiente: no se afirma compatibilidad hasta probarlo |
+| Compilación web de Flutter (`--no-wasm-dry-run`) | correcta en CI (`build-web.yml`), comprobación sin URL externas superada |
+| Chromium 156 | acceso y mapa correctos, sin peticiones externas ([detalle](BROWSER_COMPATIBILITY.md)) |
+| Firefox 85.0 | acceso, mapa z11 y zoom a z16 correctos; administración y archivos pendientes ([detalle](BROWSER_COMPATIBILITY.md)) |
 | Instalador de extremo a extremo (dos ejecuciones, idempotencia) | pendiente |
 | Copia, restauración y comprobación de salud sobre una instalación | pendiente |
-| Compilación Windows e instalador Inno Setup | solo en CI (`build-windows.yml`); pendiente de verificar en Actions |
+| Compilación Windows e instalador Inno Setup | correcta en CI (`build-windows.yml`: exe, ZIP portable, instalador, SHA-256); falta probarla en un Windows real |
