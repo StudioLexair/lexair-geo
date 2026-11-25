@@ -45,7 +45,10 @@ El entorno es **más pequeño que el servidor objetivo** (8 GB de RAM):
 - Debian 13, 2 vCPU Intel Xeon a 2,6 GHz, **1,9 GiB de RAM**.
 - PostgreSQL 17.12 con `shared_buffers` de 128 MB (límite del entorno),
   `work_mem` 16 MB, `jit = off`, `random_page_cost` 1,1.
-- API Node 26.13.1 con `--max-old-space-size=512` y un pool de 16 conexiones.
+- API Node 26.13.1 con `--max-old-space-size=512`, `DB_POOL_MAX=16` y `LOG_LEVEL=warn`.
+- `RATE_LIMIT_PER_MINUTE=100000`: los 30 usuarios simulados comparten la IP
+  127.0.0.1 y el límite por defecto (600/min por IP) los habría frenado con 429. En
+  producción cada puesto tiene su IP y se mantiene el valor por defecto.
 - El generador de carga corre **en la misma máquina** y le quita CPU al API y a
   PostgreSQL.
 - Las peticiones van directas al API (`127.0.0.1:3000`), sin Nginx ni TLS.

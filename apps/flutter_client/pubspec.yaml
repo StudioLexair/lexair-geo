@@ -31,3 +31,21 @@ flutter:
   uses-material-design: true
   assets:
     - assets/config/
+  # Fuentes empaquetadas (OFL 1.1, ver assets/fonts/OFL.txt): Flutter Web no
+  # descarga Roboto ni fuentes de respaldo de fonts.gstatic.com.
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
+        - asset: assets/fonts/NotoSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/NotoSans-Italic.ttf
+          style: italic
+    - family: NotoSansMono
+      fonts:
+        - asset: assets/fonts/NotoSansMono-Regular.ttf
+    # Alias interno: el motor web (CanvasKit/Skwasm) necesita una familia «Roboto»
+    # como respaldo por defecto y, si no está empaquetada, la descarga de Internet.
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf

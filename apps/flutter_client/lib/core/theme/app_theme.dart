@@ -29,6 +29,8 @@ ThemeData buildLexairTheme() {
   );
   return ThemeData(
     useMaterial3: true,
+    // Fuente empaquetada: idéntica en Windows y Web y sin descargas externas.
+    fontFamily: 'NotoSans',
     colorScheme: scheme,
     scaffoldBackgroundColor: LexairColors.panel,
     visualDensity: VisualDensity.compact,

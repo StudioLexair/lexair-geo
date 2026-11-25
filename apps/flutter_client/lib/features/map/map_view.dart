@@ -107,6 +107,16 @@ class _MapViewState extends State<MapView> {
           ],
         ),
         MapOverlayControls(map: _map, cursor: _cursor),
+        // Un paquete de prueba nunca debe pasar por cartografía real de Villa Clara.
+        if (pkg?.isSynthetic ?? false)
+          const Positioned(
+            left: 12,
+            bottom: 28,
+            child: Chip(
+              avatar: Icon(Icons.warning_amber, size: 18),
+              label: Text('MAPA SINTÉTICO DE PRUEBA · no es cartografía real'),
+            ),
+          ),
       ],
     );
   }

@@ -54,7 +54,7 @@ class SettingsSection extends StatelessWidget {
             child: TextField(
               controller: ctl,
               maxLines: 8,
-              style: const TextStyle(fontFamily: 'monospace'),
+              style: const TextStyle(fontFamily: 'NotoSansMono'),
               decoration: InputDecoration(labelText: 'Valor (JSON)', errorText: error),
             ),
           ),

@@ -117,7 +117,7 @@ Future<void> showTemporaryPassword(BuildContext context, String username, String
           Text('Entregue esta contraseña a «$username» por un canal seguro. '
               'No se volverá a mostrar y deberá cambiarse en el primer acceso.'),
           const SizedBox(height: 12),
-          SelectableText(password, style: const TextStyle(fontFamily: 'monospace', fontSize: 18)),
+          SelectableText(password, style: const TextStyle(fontFamily: 'NotoSansMono', fontSize: 18)),
         ]),
         actions: [FilledButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Entendido'))],
       ),
