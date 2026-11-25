@@ -69,7 +69,9 @@ cambiarse en el primer acceso. No existen contraseñas por defecto.
 
 ## 3. Puestos cliente
 
-1. Descargue la CA desde `http://geo.internal/ca/lexair-geo-ca.crt` e instálela como
+1. Descargue la CA desde `http://geo.internal/ca/lexair-geo-ca.crt` (copia pública en
+   `/opt/lexair-geo/ca/`; Nginx solo publica ese fichero, el resto de `/ca/` da 404) e
+   instálela como
    «Entidad de certificación raíz de confianza» (Windows: `certutil -addstore Root`,
    o el instalador de LEXAIR GEO con `/CAFILE=`).
 2. **Windows**: ejecute `LexairGeo-X.Y.Z-Setup-x64.exe` (sin Internet) o descomprima el ZIP

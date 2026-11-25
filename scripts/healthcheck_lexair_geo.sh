@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # LEXAIR GEO · Verificación de salud. Código de salida 0 = todo correcto.
-# Uso: healthcheck_lexair_geo.sh [--local] [--url https://geo.internal] [--json]
-#  --local  comprueba también servicios systemd, disco, memoria y copias.
+# Uso: healthcheck_lexair_geo.sh [--local] [--url https://geo.internal] [--cacert ca.crt] [--json]
+#  --local   comprueba también servicios systemd, disco, memoria y copias.
+#  --url     servidor a comprobar por HTTPS (por defecto https://127.0.0.1).
+#  --cacert  CA para validar el certificado desde otro equipo
+#            (por defecto la CA del servidor o su copia pública en /opt/lexair-geo/ca).
 set -uo pipefail
-URL=""; LOCAL=0; JSON=0
+URL=""; LOCAL=0; JSON=0; CA=""
 while [[ $# -gt 0 ]]; do
   case "$1" in --url) URL="$2"; shift 2 ;; --local) LOCAL=1; shift ;; --json) JSON=1; shift ;;
+    --cacert) CA="$2"; shift 2 ;;
     *) echo "Opción desconocida: $1" >&2; exit 2 ;; esac
 done
 FAIL=0; RESULTS=()
@@ -14,9 +18,11 @@ check() { # nombre, estado(ok|warn|fail), detalle
   [[ "$2" == fail ]] && FAIL=1
   (( JSON )) || printf '%-5s %-22s %s\n' "$( [[ $2 == ok ]] && echo OK || { [[ $2 == warn ]] && echo AVISO || echo FALLO; })" "$1" "$3"
 }
-CA=/etc/lexair-geo/pki/ca.crt
+if [[ -z "$CA" ]]; then
+  for c in /etc/lexair-geo/pki/ca.crt /opt/lexair-geo/ca/lexair-geo-ca.crt; do [[ -r "$c" ]] && { CA="$c"; break; }; done
+fi
 CURL=(curl -fsS --max-time 5)
-[[ -f "$CA" ]] && CURL+=(--cacert "$CA")
+[[ -n "$CA" && -r "$CA" ]] && CURL+=(--cacert "$CA")
 
 if (( LOCAL )); then
   for s in postgresql lexair-geo-api lexair-geo-tiles nginx; do
@@ -45,10 +51,10 @@ if (( LOCAL )); then
     openssl x509 -in /etc/lexair-geo/pki/server.crt -noout -checkend $((30*86400)) >/dev/null \
       && check certificado ok "válido hasta $END" || check certificado warn "caduca pronto: $END"
   fi
-  [[ -z "$URL" ]] && URL="https://127.0.0.1"
 fi
+[[ -n "$URL" ]] || URL="https://127.0.0.1"
 
-if [[ -n "$URL" ]]; then
+{
   H=$("${CURL[@]}" "$URL/api/v1/health" 2>&1) && check "HTTPS /api/v1/health" ok "$(echo "$H" | grep -o '"status":"[a-z]*"' | head -1)" \
     || check "HTTPS /api/v1/health" fail "$H"
   S=$("${CURL[@]}" "$URL/tiles/styles.json" 2>/dev/null) && check "HTTPS estilos" ok "$(echo "$S" | grep -o '"id":"[a-z_]*"' | tr '\n' ' ')" \
@@ -57,8 +63,9 @@ if [[ -n "$URL" ]]; then
   [[ "$CODE" == "200 image/png" ]] && check "HTTPS mosaico" ok "z10/284/446 image/png" || check "HTTPS mosaico" fail "${CODE:-sin respuesta}"
   W=$("${CURL[@]}" -o /dev/null -w '%{http_code}' "$URL/" 2>/dev/null)
   [[ "$W" == 200 ]] && check "cliente web" ok "HTTP 200" || check "cliente web" warn "HTTP ${W:-—} (¿paquete sin web/?)"
-fi
+}
 
+(( ${#RESULTS[@]} > 0 )) || { FAIL=1; RESULTS+=("verificación|fail|no se ejecutó ninguna comprobación"); }
 if (( JSON )); then
   printf '{"ok":%s,"checks":[' "$( ((FAIL)) && echo false || echo true)"
   for i in "${!RESULTS[@]}"; do IFS='|' read -r n s d <<< "${RESULTS[$i]}"

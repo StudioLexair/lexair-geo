@@ -25,7 +25,8 @@ DB_MB=$(sudo -u postgres psql -qAt -c "SELECT pg_database_size('$DB') / 1048576"
 
 say "Volcando $DB → $OUT"
 T0=$(date +%s)
-sudo -u postgres pg_dump -d "$DB" -Fc -Z 6 --no-owner --no-acl -f "$OUT.part"
+trap 'rm -f "$OUT.part"' EXIT   # no dejar volcados a medias si algo falla
+sudo -u postgres pg_dump -d "$DB" -Fc -Z 6 --no-owner -f "$OUT.part"   # con permisos (ACL) del rol de aplicación
 mv "$OUT.part" "$OUT"
 sudo -u postgres pg_restore -l "$OUT" > /dev/null   # el archivo es legible
 SHA=$(sha256sum "$OUT" | cut -d' ' -f1)
@@ -35,15 +36,16 @@ COUNTS=$(sudo -u postgres psql -d "$DB" -qAt -c "SELECT json_build_object(
   'memberships', (SELECT count(*) FROM directory.person_memberships),
   'users', (SELECT count(*) FROM identity.users),
   'audit', (SELECT count(*) FROM audit.audit_logs),
-  'lastMigration', (SELECT max(version) FROM public.schema_migrations))")
+  'lastMigration', (SELECT max(filename) FROM public.schema_migrations))")
 VER=$(cat /opt/lexair-geo/current/VERSION 2>/dev/null || echo desconocida)
 cat > "$DIR/lexair_geo_${STAMP}.meta.json" <<JSON
 {"file":"$(basename "$OUT")","sha256":"$SHA","createdAt":"$STAMP","appVersion":"$VER",
  "pgVersion":"$(sudo -u postgres psql -qAt -c 'SHOW server_version')","sizeBytes":$(stat -c %s "$OUT"),
  "seconds":$(( $(date +%s) - T0 )),"counts":$COUNTS}
 JSON
-# Configuración (sin claves privadas ni secretos de base de datos).
+# Configuración (sin claves privadas ni secretos: el certificado se reemite con el instalador).
 tar -C / -czf "$DIR/lexair_geo_${STAMP}_config.tar.gz" --exclude='etc/lexair-geo/pki/private' \
+  --exclude='etc/lexair-geo/pki/server.key' \
   --exclude='etc/lexair-geo/db-secrets.env' --exclude='etc/lexair-geo/api.env' \
   etc/lexair-geo etc/nginx/sites-available/lexair-geo.conf 2>/dev/null || true
 chown postgres:lexair "$DIR"/lexair_geo_"${STAMP}"* 2>/dev/null || true

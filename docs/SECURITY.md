@@ -51,7 +51,11 @@ servidor rechazaría. Pruebas en `services/api/tests/integration/*.test.ts`.
 
 - HTTPS interno con **CA privada** creada en el servidor (clave en
   `/etc/lexair-geo/pki/private`, 0600, nunca sale del servidor ni entra en copias).
-- TLS 1.2/1.3, HSTS, `X-Frame-Options DENY`, `nosniff`, `Referrer-Policy no-referrer`
+  `/etc/lexair-geo/pki` es 0750 root; la clave del servidor (0600) tampoco entra en
+  copias. Solo el certificado **público** de la CA se copia a
+  `/opt/lexair-geo/ca/lexair-geo-ca.crt` para su descarga; cualquier otra ruta `/ca/`
+  responde 404.
+- TLS 1.2/1.3 (TLS 1.0/1.1 rechazados, comprobado), HSTS, `X-Frame-Options DENY`, `nosniff`, `Referrer-Policy no-referrer`
   y CSP `default-src 'self'` (sin orígenes externos).
 - El API y el servicio de mosaicos escuchan solo en `127.0.0.1`; PostgreSQL solo en
   `localhost`.

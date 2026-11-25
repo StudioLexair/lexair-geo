@@ -150,6 +150,35 @@ Las cifras completas y la revisión visual están en
 | Compilación web de Flutter (`--no-wasm-dry-run`) | correcta en CI (`build-web.yml`), comprobación sin URL externas superada |
 | Chromium 156 | acceso y mapa correctos, sin peticiones externas ([detalle](BROWSER_COMPATIBILITY.md)) |
 | Firefox 85.0 | acceso, mapa z11 y zoom a z16 correctos; administración y archivos pendientes ([detalle](BROWSER_COMPATIBILITY.md)) |
-| Instalador de extremo a extremo (dos ejecuciones, idempotencia) | pendiente |
-| Copia, restauración y comprobación de salud sobre una instalación | pendiente |
+| Instalador de extremo a extremo (dos ejecuciones, idempotencia) | correcto en Debian 13, 1,9 GiB, 2 vCPU, con `LEXAIR_ALLOW_UNSUPPORTED_OS=1` ([detalle](#instalador-y-operación-en-una-instalación-real)); falta en Ubuntu Server LTS de 8 GB |
+| Copia, restauración y comprobación de salud sobre una instalación | correctas en la misma instalación ([detalle](#instalador-y-operación-en-una-instalación-real)) |
 | Compilación Windows e instalador Inno Setup | correcta en CI (`build-windows.yml`: exe, ZIP portable, instalador, SHA-256); falta probarla en un Windows real |
+
+## Instalador y operación en una instalación real
+
+Entorno: Debian 13 (no soportado oficialmente, de ahí `LEXAIR_ALLOW_UNSUPPORTED_OS=1`),
+1,9 GiB de RAM, 2 vCPU, PostgreSQL 17 + PostGIS 3.5, Nginx 1.26. Paquete
+`lexair-geo-server-0.1.0.tar.gz` (Node, API, web, mapas `vc-20261125-z16`, catálogo)
+generado con `make_server_bundle.sh`, sin acceso a Internet durante la instalación.
+Fecha: 2026-11-25.
+
+| Prueba | Resultado |
+|---|---|
+| Instalación inicial | 14 pasos, código 0 en 13 s; `shared_buffers` 495 MB; catálogo 13 municipios, 581 localidades, 4 963 direcciones, 3 926 POI; certificado `DNS:geo.internal,DNS:localhost,IP:127.0.0.1` |
+| Contraseña temporal | solo en la terminal; ausente de `/var/log/lexair-geo/install-*.log` |
+| Reejecuciones (3) | código 0 en ≈ 5 s; conserva configuración, secretos, base, JWT, CA, certificado y catálogo; 0 migraciones nuevas; sin crear otro administrador |
+| CA pública | `http://geo.internal/ca/lexair-geo-ca.crt` 200; otras rutas `/ca/` 404 por HTTPS (301→404 por HTTP); `curl --cacert` con la CA descargada: `ssl_verify_result=0` |
+| TLS y cabeceras | TLS 1.3; TLS 1.0/1.1 rechazados; HSTS, CSP, `X-Frame-Options DENY`, `nosniff`, `Referrer-Policy no-referrer` |
+| Recuperación del superadministrador | `create-admin --reset`: contraseña temporal, cambio obligatorio, sesión antigua rechazada (401) a los 6 s, auditoría `user.password_reset` |
+| API por HTTPS (20 000 personas ficticias) | acceso, personas, ficha, proximidad 500 m / 1 km grupo A / 1 234 m personalizado, puntos del mapa z12 (agrupados) y z16, geocodificación, panel, auditoría: 200 |
+| Copia | ≈ 1 s; `.dump` + `.meta.json` + `_config.tar.gz` sin ficheros `.key` ni secretos |
+| Restauración | ≈ 3 s; tras borrar 500 personas, vuelve a 20 000; vista `map_cluster_cells` idéntica a un recálculo forzado (38 879 celdas); API activo; sin bases temporales residuales |
+| Restauración rechazada | sin `--confirm` ni terminal, confirmación errónea y volcado antiguo sin permisos (`--no-acl`): código 1, base intacta, API activo |
+| `healthcheck --local` y `--json` | 15/15 OK, código 0 |
+
+Problemas encontrados y corregidos durante estas pruebas: consulta de la última
+migración (`version` → `filename`), volcados sin permisos de `lexair_api`, errores de
+`pg_restore` enmascarados, API detenido tras una restauración fallida, clave del
+servidor en la copia de configuración, CA no legible por Nginx (403), `--json` sin
+comprobaciones y `create-admin --reset` sin revocar sesiones.
+

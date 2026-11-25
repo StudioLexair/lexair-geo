@@ -86,7 +86,7 @@ step() { STEP=$1; echo; echo "[$1/14] $2"; }
 ok()   { echo "  ✓ $*"; }
 warn() { echo "  ! $*"; }
 die()  { echo "  ✗ $*" >&2; exit 1; }
-psql_su() { sudo -u postgres psql -v ON_ERROR_STOP=1 -qAt "$@"; }
+psql_su() { sudo -u postgres PGOPTIONS="-c client_min_messages=warning" psql -v ON_ERROR_STOP=1 -qAt "$@"; }
 secret() { openssl rand -base64 96 | tr -d '\n/+=' | cut -c1-"${1:-40}"; }  # 96 bytes = 128 car. antes de filtrar
 
 # ---------------------------------------------------------------------------
@@ -230,7 +230,7 @@ if [[ ! -f "$REL/.complete" ]] || ! cmp -s "$BUNDLE/SHA256SUMS" "$REL/SHA256SUMS
 else
   ok "Versión ya desplegada"
 fi
-PREV=$(readlink -f "$PREFIX/current" 2>/dev/null || true)
+PREV=""; [[ -L "$PREFIX/current" ]] && PREV=$(readlink -f "$PREFIX/current")
 ln -sfn "$REL" "$PREFIX/current.new" && mv -T "$PREFIX/current.new" "$PREFIX/current"
 [[ -n "$PREV" && "$PREV" != "$REL" ]] && ok "Versión anterior disponible para retroceso: $PREV"
 # Conservar solo las 3 últimas versiones.
@@ -292,7 +292,8 @@ else
 fi
 [[ -n "$SERVER_IPS" ]] || SERVER_IPS=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9.]+$' | paste -sd, - || true)
 SAN="DNS:${SERVER_NAME},DNS:localhost,IP:127.0.0.1"
-IFS=',' read -ra ips <<< "$SERVER_IPS"; for ip in "${ips[@]}"; do [[ -n "$ip" ]] && SAN+=",IP:$ip"; done
+IFS=',' read -ra ips <<< "$SERVER_IPS"
+for ip in "${ips[@]}"; do [[ -n "$ip" && ",$SAN," != *",IP:$ip,"* ]] && SAN+=",IP:$ip"; done
 NEED_CERT=1
 if [[ -f "$PKI/server.crt" ]] && openssl x509 -in "$PKI/server.crt" -noout -checkend $((30*86400)) >/dev/null \
    && [[ "$(cat "$PKI/server.san" 2>/dev/null)" == "$SAN" ]]; then NEED_CERT=0; fi
@@ -310,7 +311,11 @@ if (( NEED_CERT )); then
 else
   ok "Certificado vigente conservado ($SAN)"
 fi
-chmod 0755 "$PKI"
+# Publicar solo el certificado público de la CA: Nginx (www-data) no puede ni debe
+# leer /etc/lexair-geo, donde están los secretos.
+install -d -m 0755 "$PREFIX/ca"
+install -m 0644 "$PKI/ca.crt" "$PREFIX/ca/lexair-geo-ca.crt"
+chmod 0750 "$PKI"   # solo root (Nginx maestro lee clave y certificado)
 
 # ---------------------------------------------------------------------------
 step 11 "Paquete cartográfico"

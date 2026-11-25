@@ -19,8 +19,14 @@ sudo systemctl restart lexair-geo-api
 
 ```bash
 sudo /opt/lexair-geo/current/scripts/healthcheck_lexair_geo.sh --local          # todo
-/opt/lexair-geo/current/scripts/healthcheck_lexair_geo.sh --url https://geo.internal --json
+/opt/lexair-geo/current/scripts/healthcheck_lexair_geo.sh --json                # HTTPS local, salida JSON
+healthcheck_lexair_geo.sh --url https://geo.internal --cacert lexair-geo-ca.crt  # desde otro equipo
 ```
+
+Sin `--url` comprueba `https://127.0.0.1`. La CA se toma de `--cacert` o, si existe, de
+`/etc/lexair-geo/pki/ca.crt` o su copia pública `/opt/lexair-geo/ca/lexair-geo-ca.crt`.
+`--json` devuelve `{"ok":…,"checks":[{"name","status","detail"}]}`; si por error no se
+ejecutara ninguna comprobación, el resultado es `ok:false` (nunca un «verde» vacío).
 
 Comprueba servicios, API, mosaicos (incluido un PNG real de Santa Clara z10), cliente
 web, disco (< 85 %), memoria disponible, antigüedad de la última copia (≤ 26 h) y
@@ -34,10 +40,15 @@ administración muestra la misma información.
 sudo /opt/lexair-geo/current/scripts/backup_lexair_geo.sh [--keep 14] [--dir /srv/lexair-geo/backups]
 ```
 
-- `lexair_geo_<fecha>.dump` (`pg_dump -Fc`, verificado con `pg_restore -l`).
+- `lexair_geo_<fecha>.dump` (`pg_dump -Fc`, verificado con `pg_restore -l`). Incluye
+  los permisos (GRANT) del rol de aplicación `lexair_api`; la restauración rechaza
+  volcados sin ellos.
 - `lexair_geo_<fecha>.meta.json`: SHA-256, versión, recuentos (personas, ubicaciones,
   membresías, usuarios, auditoría, última migración), duración.
-- `lexair_geo_<fecha>_config.tar.gz`: configuración **sin** claves privadas ni secretos.
+- `lexair_geo_<fecha>_config.tar.gz`: `/etc/lexair-geo` **sin** secretos: excluye
+  `api.env`, `db-secrets.env`, `pki/private/` (clave de la CA) y `pki/server.key`.
+  Tras una reinstalación, el instalador genera secretos y certificado nuevos (o
+  reutilice los suyos desde un soporte cifrado aparte).
 - Rotación: conserva las 14 más recientes.
 
 **Copia externa**: las copias contienen datos personales. Cópielas regularmente a un
@@ -57,8 +68,16 @@ sudo /opt/lexair-geo/current/scripts/restore_lexair_geo.sh /srv/lexair-geo/backu
 2. Pide **confirmación explícita** escribiendo `lexair_geo` (o `--confirm lexair_geo`
    en procedimientos automatizados documentados).
 3. Hace una copia previa automática de la base actual.
-4. Restaura en una base temporal, comprueba su contenido y solo entonces la
-   sustituye; reaplica los permisos del rol de aplicación y reinicia el API.
+4. Restaura en una base temporal (`pg_restore` con lista filtrada: se omiten las
+   extensiones, ya creadas por el instalador, y los datos de `spatial_ref_sys`, que
+   pertenecen a PostGIS). Cualquier error de `pg_restore` aborta la operación.
+5. Comprueba que la base temporal contiene `directory.persons` y los permisos de
+   `lexair_api`; solo entonces la sustituye, reasigna `CONNECT` y reinicia el API.
+6. Si algo falla, elimina la base temporal, deja la base actual intacta y vuelve a
+   arrancar el API.
+
+La vista materializada de agrupación del mapa (`geo.map_cluster_cells`) se restaura con
+sus datos; no hace falta recalcularla (comprobado: idéntica a un `refresh` forzado).
 
 Pruebe la restauración al menos una vez por trimestre en un equipo de pruebas.
 
@@ -74,7 +93,10 @@ sudo bash -c '. /etc/lexair-geo/db-secrets.env && cd /opt/lexair-geo/current/api
   /opt/lexair-geo/node/bin/node dist/cli/create-admin.js --username admin --reset'
 ```
 
-Muestra una contraseña temporal (cambio obligatorio en el siguiente acceso).
+Muestra una contraseña temporal (cambio obligatorio en el siguiente acceso), conserva
+el rol del usuario, revoca sus sesiones abiertas (efectivo en ≤ 5 s por la caché de
+sesiones del API) y registra `user.password_reset` en la auditoría. La salida JSON
+indica `"reset": true`.
 
 ## Actualizaciones
 

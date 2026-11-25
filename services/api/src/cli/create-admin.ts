@@ -42,12 +42,23 @@ async function main(): Promise<void> {
          must_change_password = true, failed_attempts = 0, locked_until = NULL, is_active = true`,
       [username, values['display-name'], hashed, role.rows[0].id],
     );
+    const isReset = Boolean(values.reset && exists.rowCount);
+    if (isReset) {
+      // Recuperación de acceso: se invalidan las sesiones abiertas de ese usuario.
+      await client.query(
+        `UPDATE security.sessions SET revoked_at = now()
+          WHERE revoked_at IS NULL AND user_id = (SELECT id FROM identity.users WHERE lower(username) = $1)`,
+        [username],
+      );
+    }
     await client.query(
       `INSERT INTO audit.audit_logs (actor_username, action, entity_type, entity_id, details)
        VALUES ('installer', $1, 'user', $2, '{}'::jsonb)`,
-      [values.reset && exists.rowCount ? 'user.password_reset' : 'user.create', username],
+      [isReset ? 'user.password_reset' : 'user.create', username],
     );
-    console.log(JSON.stringify({ created: true, username, role: values.role, mustChangePassword: true,
+    // En un restablecimiento el rol existente no se modifica.
+    console.log(JSON.stringify({ created: !isReset, reset: isReset, username,
+      ...(isReset ? {} : { role: values.role }), mustChangePassword: true, sessionsRevoked: isReset,
       temporaryPassword: provided ? '(proporcionada por variable de entorno)' : password }));
   } finally {
     await client.end();
