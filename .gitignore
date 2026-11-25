@@ -1,0 +1,40 @@
+# Dependencias y artefactos de compilación
+node_modules/
+dist/
+coverage/
+build/
+!/scripts/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+
+# Secretos y configuración local (NUNCA versionar)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+
+# Datos cartográficos y volcados (se generan fuera del repositorio)
+mapwork/
+*.pbf
+*.osm
+*.mbtiles
+*.gpkg
+*.db
+*.sqlite
+*.dump
+*.sql.gz
+*.tar.gz
+*.zip
+backups/
+
+# Registros
+*.log
