@@ -1,0 +1,82 @@
+# LEXAIR GEO · Integración continua: análisis, pruebas unitarias y compilación.
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  NODE_VERSION: 26.13.1
+  FLUTTER_VERSION: 3.50.1
+
+jobs:
+  api:
+    name: API (lint, tipos, unitarias, build)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npx vitest run tests/unit
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+
+  tile-service:
+    name: Servidor de mosaicos
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: services/tile_service
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm run lint
+      - run: npm test
+
+  flutter:
+    name: Flutter (analyze + test)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/flutter_client
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter analyze
+      - run: flutter test
+
+  scripts:
+    name: Scripts (shellcheck, Python, SQL de mapas)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: shellcheck -S warning scripts/*.sh scripts/maps/*.sh scripts/build/*.sh
+      - run: python3 -m py_compile scripts/maps/lexair_styles.py scripts/maps/render_mbtiles.py
+      - name: Sin secretos ni datos pesados versionados
+        run: |
+          set -e
+          if git ls-files | grep -Ei '\.(pbf|mbtiles|dump|pem|key|p12|pfx|sqlite|db)$|(^|/)\.env$'; then
+            echo "::error::Hay archivos prohibidos en el repositorio"; exit 1; fi
+          if git grep -nIE '(ghp_|github_pat_)[A-Za-z0-9_]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----' -- . ':!docs/SECURITY.md'; then
+            echo "::error::Posible secreto en el código"; exit 1; fi

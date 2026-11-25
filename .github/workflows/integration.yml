@@ -1,0 +1,57 @@
+# LEXAIR GEO · Pruebas de integración contra PostgreSQL + PostGIS reales.
+name: integration
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-postgis:
+    name: API + PostGIS
+    runs-on: ubuntu-24.04
+    services:
+      postgis:
+        # postgis/postgis:17-3.5 fijada por digest
+        image: postgis/postgis@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
+        env:
+          POSTGRES_USER: lexair_ci
+          # Contraseña efímera del contenedor de CI (no es un secreto: solo existe durante el job).
+          POSTGRES_PASSWORD: ci_ephemeral_only
+          POSTGRES_DB: lexair_geo_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U lexair_ci -d lexair_geo_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LEXAIR_INTEGRATION: '1'
+      TEST_DATABASE_URL: postgres://lexair_ci:ci_ephemeral_only@127.0.0.1:5432/lexair_geo_test
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.1
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Pruebas de integración (la app usa un rol con privilegios mínimos)
+        run: npx vitest run tests/integration --reporter=default --reporter=junit --outputFile=junit-integration.xml
+      - name: Generador sintético (10 000 registros) y migraciones idempotentes
+        run: |
+          npm run build
+          DATABASE_URL="$TEST_DATABASE_URL" MIGRATIONS_DIR=../../database/migrations node dist/cli/migrate.js
+          DATABASE_URL="$TEST_DATABASE_URL" node dist/cli/seed-synthetic.js --count 10000 --batch 5000
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: junit-integration
+          path: services/api/junit-integration.xml
+          retention-days: 14

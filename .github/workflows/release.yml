@@ -1,0 +1,98 @@
+# LEXAIR GEO · Publicación: SOLO con etiqueta vX.Y.Z o ejecución manual autorizada.
+# Crea un borrador de Release en este repositorio privado (sin despliegue público).
+# Los mapas MBTiles y el catálogo NO se incluyen (se generan fuera de git; ver docs/MAP_DATA.md).
+name: release
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión semver (sin v), p. ej. 0.1.0'
+        required: true
+        type: string
+permissions:
+  contents: read
+
+jobs:
+  meta:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          v="${INPUT_VERSION:-${REF_NAME#v}}"
+          [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Versión no válida: $v"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+  web:
+    needs: meta
+    uses: ./.github/workflows/build-web.yml
+    with:
+      version: ${{ needs.meta.outputs.version }}
+
+  windows:
+    needs: meta
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      version: ${{ needs.meta.outputs.version }}
+
+  server-bundle:
+    needs: [meta, web]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.1
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lexair-geo-web-${{ needs.meta.outputs.version }}
+          path: web
+      - name: Node.js oficial verificado por SHA-256
+        run: |
+          set -euo pipefail
+          f=node-v26.13.1-linux-x64.tar.xz
+          curl -fsSLO "https://nodejs.org/dist/v26.13.1/$f"
+          curl -fsSL https://nodejs.org/dist/v26.13.1/SHASUMS256.txt | grep " $f\$" | sha256sum -c -
+      - name: Paquete de servidor
+        run: bash scripts/build/make_server_bundle.sh --version "${{ needs.meta.outputs.version }}" --node-tar node-v26.13.1-linux-x64.tar.xz --web web --out out
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lexair-geo-server-${{ needs.meta.outputs.version }}
+          path: |
+            out/*.tar.gz
+            out/*.sha256
+          retention-days: 30
+
+  publish:
+    needs: [meta, windows, server-bundle]
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: artifacts
+          pattern: lexair-geo-*-${{ needs.meta.outputs.version }}
+          merge-multiple: true
+      - run: ls -la artifacts
+      - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+        with:
+          tag_name: v${{ needs.meta.outputs.version }}
+          name: LEXAIR GEO ${{ needs.meta.outputs.version }}
+          draft: true
+          prerelease: false
+          files: artifacts/*
+          body: |
+            Borrador generado por CI. Revise y pruebe antes de publicar internamente.
+            - Paquete de servidor offline (sin mapas; ver docs/MAP_DATA.md)
+            - Cliente Windows: ZIP portable e instalador offline
+            Datos cartográficos © OpenStreetMap contributors (ODbL 1.0).

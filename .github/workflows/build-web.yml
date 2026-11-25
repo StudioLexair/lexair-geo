@@ -1,0 +1,39 @@
+# LEXAIR GEO · Compila el cliente Flutter Web (sin CDN: CanvasKit local).
+name: build-web
+on:
+  push:
+    branches: [main]
+    paths: ['apps/flutter_client/**', '.github/workflows/build-web.yml']
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/flutter_client
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.50.1
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - name: flutter build web
+        run: flutter build web --release --no-web-resources-cdn --no-source-maps --no-wasm-dry-run
+      - name: Comprobar que no hay URLs externas en tiempo de ejecución
+        run: bash ../../scripts/build/check_no_external_urls.sh build/web
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lexair-geo-web${{ inputs.version && format('-{0}', inputs.version) || '' }}
+          path: apps/flutter_client/build/web
+          retention-days: 30

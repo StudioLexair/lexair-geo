@@ -1,0 +1,56 @@
+# LEXAIR GEO · Cliente Windows: ZIP portable completo (exe + DLL + data) e instalador offline.
+name: build-windows
+on:
+  push:
+    branches: [main]
+    paths: ['apps/flutter_client/**', '.github/workflows/build-windows.yml']
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    defaults:
+      run:
+        working-directory: apps/flutter_client
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.50.1
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter build windows --release
+      - name: Empaquetar ZIP portable
+        run: |
+          $ver = '${{ inputs.version }}'; if (-not $ver) { $ver = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([^+\s]+)').Matches[0].Groups[1].Value }
+          $rel = 'build\windows\x64\runner\Release'
+          foreach ($f in 'lexair_geo.exe','flutter_windows.dll','data\icudtl.dat','data\app.so') {
+            if (-not (Test-Path (Join-Path $rel $f))) { throw "Falta $f en la compilación" } }
+          Copy-Item ..\..\infrastructure\windows\config.example.json (Join-Path $rel 'config.example.json')
+          Copy-Item ..\..\docs\WINDOWS_BUILD.md (Join-Path $rel 'LEEME.md') -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force ..\..\out | Out-Null
+          Compress-Archive -Path "$rel\*" -DestinationPath "..\..\out\LexairGeo-$ver-windows-x64.zip" -Force
+          "VERSION=$ver" | Out-File -Append $env:GITHUB_ENV
+      - name: Instalador offline (Inno Setup)
+        run: |
+          $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue
+          if (-not $iscc) { choco install innosetup --version=6.7.1 -y --no-progress; $env:Path += ';C:\Program Files (x86)\Inno Setup 6' }
+          iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$PWD\build\windows\x64\runner\Release" "/DOutDir=$PWD\..\..\out" windows\installer\lexair_geo.iss
+      - name: Sumas SHA-256
+        working-directory: out
+        run: Get-ChildItem *.zip,*.exe | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name } | Out-File -Encoding ascii SHA256SUMS-windows.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lexair-geo-windows${{ inputs.version && format('-{0}', inputs.version) || '' }}
+          path: out/
+          retention-days: 30
