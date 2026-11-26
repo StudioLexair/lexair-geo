@@ -1,7 +1,10 @@
-# LEXAIR GEO
+# VIGÍA · Lexair Geo
 
-Plataforma GIS **offline** de localización fija de personas para la provincia de
-Villa Clara (Cuba). Desarrollada por **Studio Lexair**.
+**VIGÍA** es la plataforma GIS **offline** para el seguimiento de internos en
+pase en la provincia de Villa Clara (Cuba), desarrollada por **Studio Lexair**:
+zonas dibujables sobre el mapa, marcadores de pases activos con estilo
+configurable, personal de la fuerza cercano con teléfonos, kardex arrastrable
+al mapa para fijar residencias exactas y carga de datos desde Oracle 11g.
 
 - Servidor único Ubuntu Server LTS de 8 GB en red local, sin Internet.
 - 10–30 puestos cliente: aplicación **Windows** (instalador offline o ZIP portable)

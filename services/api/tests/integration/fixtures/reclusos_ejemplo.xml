@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Worksheet ss:Name="Hoja1">
+  <Table ss:ExpandedColumnCount="3" ss:ExpandedRowCount="4">
+   <Row><Cell ss:Index="2"><Data ss:Type="String">EXPEDIENTE</Data></Cell></Row>
+   <Row><Cell ss:Index="2"><Data ss:Type="String">EX-2026-0001</Data></Cell></Row>
+   <Row><Cell ss:Index="2"><Data ss:Type="String">EX-2026-0002</Data></Cell></Row>
+   <Row><Cell ss:Index="2"><Data ss:Type="String">EX-2026-0003</Data></Cell></Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="BBDD_CON_DIRECCION">
+  <Table ss:ExpandedColumnCount="12" ss:ExpandedRowCount="4">
+   <Row>
+    <Cell><Data ss:Type="String">NIDENTIDAD</Data></Cell>
+    <Cell><Data ss:Type="String">NOMBRE1</Data></Cell>
+    <Cell><Data ss:Type="String">NOMBRE2</Data></Cell>
+    <Cell><Data ss:Type="String">APELLIDO1</Data></Cell>
+    <Cell><Data ss:Type="String">APELLIDO2</Data></Cell>
+    <Cell><Data ss:Type="String">FECINGREAL</Data></Cell>
+    <Cell><Data ss:Type="String">UNIDAD</Data></Cell>
+    <Cell><Data ss:Type="String">PROVINCIA</Data></Cell>
+    <Cell><Data ss:Type="String">MUNICIPIO</Data></Cell>
+    <Cell><Data ss:Type="String">CONSEJO</Data></Cell>
+    <Cell><Data ss:Type="String">CDR</Data></Cell>
+    <Cell><Data ss:Type="String">DIRECCION</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">00010100001</Data></Cell>
+    <Cell><Data ss:Type="String">Ejemplo</Data></Cell><Cell><Data ss:Type="String">Uno</Data></Cell>
+    <Cell><Data ss:Type="String">Prueba</Data></Cell><Cell><Data ss:Type="String">Sintetica</Data></Cell>
+    <Cell><Data ss:Type="String">2026-01-15</Data></Cell><Cell><Data ss:Type="String">CP Ejemplo VC</Data></Cell>
+    <Cell><Data ss:Type="String">Villa Clara</Data></Cell><Cell><Data ss:Type="String">Santa Clara</Data></Cell>
+    <Cell><Data ss:Type="String">Vigía Sur</Data></Cell><Cell><Data ss:Type="String">12</Data></Cell>
+    <Cell><Data ss:Type="String">Calle Ejemplo 101 entre A y B</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">00010100002</Data></Cell>
+    <Cell><Data ss:Type="String">Ejemplo</Data></Cell><Cell><Data ss:Type="String">Dos</Data></Cell>
+    <Cell><Data ss:Type="String">Prueba</Data></Cell><Cell><Data ss:Type="String">Sintetica</Data></Cell>
+    <Cell><Data ss:Type="String">2026-02-20</Data></Cell><Cell><Data ss:Type="String">CP Ejemplo VC</Data></Cell>
+    <Cell><Data ss:Type="String">Villa Clara</Data></Cell><Cell><Data ss:Type="String">Placetas</Data></Cell>
+    <Cell><Data ss:Type="String">Vigía Norte</Data></Cell><Cell><Data ss:Type="String">7</Data></Cell>
+    <Cell><Data ss:Type="String">Carretera Ejemplo km 2</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String"></Data></Cell>
+    <Cell><Data ss:Type="String">Sin</Data></Cell><Cell><Data ss:Type="String">Identidad</Data></Cell>
+    <Cell><Data ss:Type="String">Debe</Data></Cell><Cell><Data ss:Type="String">Saltarse</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+</Workbook>

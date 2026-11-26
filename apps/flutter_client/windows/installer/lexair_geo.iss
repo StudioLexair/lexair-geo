@@ -15,14 +15,14 @@
 
 [Setup]
 AppId={{6C1E2B8E-3F0D-4C47-9C6B-1E5A0B7D4E21}
-AppName=LEXAIR GEO
+AppName=VIGÍA (Lexair Geo)
 AppVersion={#AppVersion}
 AppPublisher=Studio Lexair
 DefaultDirName={autopf}\LexairGeo
 DefaultGroupName=LEXAIR GEO
 DisableProgramGroupPage=yes
 OutputDir={#OutDir}
-OutputBaseFilename=LexairGeo-{#AppVersion}-Setup-x64
+OutputBaseFilename=Vigia-{#AppVersion}-Setup-x64
 Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible

@@ -6,6 +6,8 @@ import { normalizeText } from '../../lib/text.js';
 import { allowedGroups, guard, requireUser } from '../../plugins/auth.js';
 import { writeAudit } from '../audit/audit-writer.js';
 import { importRows } from './import-service.js';
+import { importReclusos } from './reclusos-service.js';
+import { composeAddress, parseReclusosXml } from './reclusos-xml-parser.js';
 import { validateCsv } from './csv-validation.js';
 
 const ImportQuery = z.object({
@@ -58,6 +60,72 @@ export async function importRoutes(app: FastifyInstance): Promise<void> {
       errorRows: outcome.errors.length, errors: outcome.errors.slice(0, 100) };
   });
 
+  /**
+   * Libro de reclusos en pase (SpreadsheetML 2003 exportado por el registro
+   * penitenciario). Crea/actualiza personas por NIDENTIDAD, las registra como
+   * internos (unidad y fecha de ingreso) y deja la dirección compuesta; la
+   * ubicación aproximada sale del centroide del municipio (luego se precisa
+   * con el kardex arrastrando al mapa).
+   */
+  app.post('/imports/reclusos-xml', {
+    preHandler: guard('imports.run', 'persons.write', 'passes.write'),
+    bodyLimit: 30 * 1024 * 1024,
+  }, async (req, reply) => {
+    const user = requireUser(req);
+    const q = z.object({
+      group: z.enum(['A', 'B']).default('A'),
+      dryRun: z.enum(['true', 'false']).default('true'),
+      filename: z.string().trim().min(1).max(255).default('reclusos.xml'),
+    }).parse(req.query);
+    if (typeof req.body !== 'string' || req.body.length < 20) {
+      throw badRequest('Envíe el libro XML con Content-Type application/xml');
+    }
+    const [groupId] = allowedGroups(ctx, user, [q.group]);
+    const dryRun = q.dryRun === 'true';
+    const rowCap = await ctx.settings.number('xml.row_cap', 50_000);
+    let parsed;
+    try {
+      parsed = parseReclusosXml(req.body);
+    } catch (e) {
+      throw badRequest(`XML no válido: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    const munis = await ctx.db.query<{ id: number; name: string }>(
+      `SELECT id, name FROM geo.municipalities WHERE boundary IS NOT NULL`);
+    const muniMap = new Map(munis.rows.map((m) => [normalizeText(m.name), m.id]));
+    const outcome = await importReclusos(ctx, parsed.rows, muniMap, {
+      groupId: groupId!,
+      userId: user.id,
+      dryRun,
+      rowCap,
+    });
+    // Las filas que el parser descartó se informan como errores, no desaparecen.
+    outcome.total += parsed.skipped.length;
+    if (!dryRun) outcome.ok += 0;
+    for (const sk of parsed.skipped) outcome.errors.push({ row: sk.row, message: sk.reason });
+    const status = outcome.errors.length === 0 ? 'completed'
+      : outcome.ok > 0 ? 'completed_with_errors' : 'failed';
+    const job = await withTransaction(ctx.db, async (c) => {
+      const { rows } = await c.query<{ id: string }>(
+        `INSERT INTO directory.import_jobs (kind, filename, target_group, status, dry_run, total_rows,
+           ok_rows, error_rows, errors, created_by, finished_at)
+         VALUES ('reclusos_xml', $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, now()) RETURNING id`,
+        [q.filename, q.group, status, dryRun, outcome.total, outcome.ok,
+          outcome.errors.length, JSON.stringify(outcome.errors.slice(0, 500)), user.id],
+      );
+      await writeAudit(c, req, { action: dryRun ? 'import.validate' : 'import.run',
+        entityType: 'import_job', entityId: rows[0]!.id,
+        details: { kind: 'reclusos_xml', sheet: parsed.sheetUsed, total: outcome.total, ok: outcome.ok,
+          inmates: outcome.inmates, located: outcome.located, errors: outcome.errors.length,
+          filename: q.filename } });
+      return rows[0]!.id;
+    });
+    reply.code(dryRun ? 200 : 201);
+    return { jobId: job, dryRun, status, sheet: parsed.sheetUsed, sheets: parsed.sheets,
+      totalRows: outcome.total, okRows: outcome.ok, inmates: outcome.inmates,
+      located: outcome.located, errorRows: outcome.errors.length,
+      errors: outcome.errors.slice(0, 100) };
+  });
+
   app.get('/imports', { preHandler: guard('imports.run') }, async () => {
     const { rows } = await ctx.db.query(
       `SELECT j.id, j.kind, j.filename, j.target_group AS "targetGroup", j.status, j.dry_run AS "dryRun",
@@ -72,7 +140,7 @@ export async function importRoutes(app: FastifyInstance): Promise<void> {
   app.get('/imports/:id', { preHandler: guard('imports.run') }, async (req) => {
     const { id } = IdParams.parse(req.params);
     const { rows } = await ctx.db.query(
-      `SELECT id, filename, target_group AS "targetGroup", status, dry_run AS "dryRun",
+      `SELECT id, kind, filename, target_group AS "targetGroup", status, dry_run AS "dryRun",
               total_rows AS "totalRows", ok_rows AS "okRows", error_rows AS "errorRows", errors,
               created_at AS "createdAt"
          FROM directory.import_jobs WHERE id = $1`, [id],

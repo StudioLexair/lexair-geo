@@ -50,6 +50,8 @@ export async function buildApp(cfg: AppConfig, db: Db): Promise<FastifyInstance>
   app.decorate('ctx', { cfg, db, settings: new SettingsService(db), groups: await loadGroups(db) });
   app.decorateRequest('auth', null);
 
+  app.addContentTypeParser(['application/xml', 'text/xml'], { parseAs: 'string', bodyLimit: 30 * 1024 * 1024 },
+    (_req, body, done) => done(null, body as string));
   app.addContentTypeParser('text/csv', { parseAs: 'string', bodyLimit: 20 * 1024 * 1024 },
     (_req, body, done) => done(null, body));
 

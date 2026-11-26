@@ -40,7 +40,7 @@ class LexairApp extends StatelessWidget {
         Provider(create: (_) => AdminRepository(services.api)),
       ],
       child: MaterialApp(
-        title: 'LEXAIR GEO',
+        title: 'VIGÍA · Lexair Geo',
         debugShowCheckedModeBanner: false,
         theme: buildLexairTheme(),
         home: const _Root(),

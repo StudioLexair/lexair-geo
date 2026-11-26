@@ -39,7 +39,7 @@ jobs:
           Copy-Item ..\..\infrastructure\windows\config.example.json (Join-Path $rel 'config.example.json')
           Copy-Item ..\..\docs\WINDOWS_BUILD.md (Join-Path $rel 'LEEME.md') -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force ..\..\out | Out-Null
-          Compress-Archive -Path "$rel\*" -DestinationPath "..\..\out\LexairGeo-$ver-windows-x64.zip" -Force
+          Compress-Archive -Path "$rel\*" -DestinationPath "..\..\out\Vigia-$ver-windows-x64-portable.zip" -Force
           "VERSION=$ver" | Out-File -Append $env:GITHUB_ENV
       - name: Instalador offline (Inno Setup)
         run: |

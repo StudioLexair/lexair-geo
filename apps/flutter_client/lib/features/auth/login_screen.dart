@@ -191,7 +191,7 @@ class _BrandPanel extends StatelessWidget {
               Icon(Icons.travel_explore, color: LexairColors.accent, size: 36),
               SizedBox(width: 12),
               Text(
-                'LEXAIR GEO',
+                'VIGÍA',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 28,

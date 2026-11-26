@@ -1,0 +1,97 @@
+# LEXAIR GEO · Paquete cartográfico de Villa Clara (sin conexión).
+# Actualiza el mapa offline: descarga el extracto más reciente de Cuba,
+# importa con osm2pgsql, genera costas y construye el paquete MBTiles
+# (estándar, oscuro y alto contraste) con su manifest.json.
+# Se ejecuta semanalmente, manualmente o desde release.yml.
+name: build-map
+on:
+  workflow_dispatch:
+    inputs:
+      maxzoom:
+        description: 'Zoom máximo del paquete (por defecto 16)'
+        type: string
+        required: false
+        default: '16'
+  workflow_call:
+    inputs:
+      maxzoom:
+        type: string
+        required: false
+        default: '16'
+  schedule:
+    # Lunes 03:00 UTC — mantiene el mapa «hasta la fecha».
+    - cron: '0 3 * * 1'
+permissions:
+  contents: read
+
+jobs:
+  map:
+    name: Paquete cartográfico Villa Clara
+    runs-on: ubuntu-24.04
+    env:
+      MAXZOOM: ${{ inputs.maxzoom || '16' }}
+    services:
+      prep:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: lexair
+          POSTGRES_PASSWORD: lexair_dev
+          POSTGRES_DB: lexair_prep
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Herramientas OSM y mapnik
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            osm2pgsql osmium-tool osmcoastline \
+            python3 python3-pip python3-mapnik python3-psycopg2 sqlite3
+
+      - name: Descarga del extracto de Cuba (Geofabrik, más reciente)
+        working-directory: /tmp
+        run: |
+          curl -fO https://download.geofabrik.de/central-america/cuba-latest.osm.pbf
+          curl -fO https://download.geofabrik.de/central-america/cuba-latest.osm.pbf.md5
+          md5sum -c cuba-latest.osm.pbf.md5
+
+      - name: Importa Villa Clara al almacén de preparación
+        run: |
+          export PGPASSWORD=lexair_dev
+          psql -h 127.0.0.1 -U lexair -d lexair_prep -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
+          osm2pgsql -d lexair_prep -H 127.0.0.1 -U lexair -O flex \
+            -S scripts/maps/osm2pgsql_lexair.lua --slim --cache 250 \
+            --bbox -80.79,21.92,-78.79,23.47 /tmp/cuba-latest.osm.pbf
+
+      - name: Costas (osmcoastline)
+        working-directory: /tmp
+        run: osmcoastline -v -e -f -o coast.db -p land -s 4326 /tmp/cuba-latest.osm.pbf
+
+      - name: Construye el paquete de mosaicos + manifest.json
+        run: |
+          mkdir -p out/mappkg
+          bash scripts/maps/build_map_package.sh \
+            "postgres://lexair:lexair_dev@127.0.0.1:5432/lexair_prep" \
+            /tmp/coast.db /tmp/cuba-latest.osm.pbf out/mappkg 6 "$MAXZOOM" 2
+
+      - name: Catálogo geográfico (municipios, localidades) para geocodificación
+        run: |
+          mkdir -p out/catalog
+          bash scripts/maps/export_geo_catalog.sh \
+            "postgres://lexair:lexair_dev@127.0.0.1:5432/lexair_prep" \
+            /tmp/cuba-latest.osm.pbf out/catalog || echo "::warning::catálogo parcial"
+
+      - name: Sumas SHA-256
+        working-directory: out
+        run: find . -type f ! -name '*.sha256' -exec sha256sum {} \; | sort > SHA256SUMS-mapa.txt
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: paquete-cartografico-${{ github.run_number }}
+          path: out/
+          retention-days: 90

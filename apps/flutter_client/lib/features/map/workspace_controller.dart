@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
@@ -84,6 +85,52 @@ class WorkspaceController extends ChangeNotifier {
 
   /// Herramienta de dibujo de zonas (círculo, rectángulo, polígono).
   final drawing = DrawingController();
+
+  // --- Kardex (lista lateral de internos) ------------------------------------
+  bool kardexOpen = false;
+  bool kardexDragging = false;
+  /// Posición global del puntero mientras se arrastra una ficha al mapa.
+  Map<String, double>? kardexDragGlobal;
+  /// Vista previa del punto de destino (el mapa actualiza al mover).
+  LatLng? kardexDropPreview;
+  /// Persona que se va a marcar con el próximo toque en el mapa.
+  Person? pickForPerson;
+
+  void setKardexOpen(bool v) {
+    kardexOpen = v;
+    notifyListeners();
+  }
+
+  void setKardexDragging(bool v) {
+    kardexDragging = v;
+    if (!v) kardexDropPreview = null;
+    notifyListeners();
+  }
+
+  /// «Marcar en el mapa» del kardex: el próximo toque fija la residencia.
+  void startPickFor(Person p) {
+    pickForPerson = p;
+    pickMode = false;
+    selected = p;
+    notifyListeners();
+  }
+
+  void clearPickFor() {
+    pickForPerson = null;
+    setProvisional(null);
+  }
+
+  /// Posición global del puntero durante el arrastre (la vista la convierte).
+  void updateKardexDrag(Offset globalPosition) {
+    kardexDragGlobal = {'x': globalPosition.dx, 'y': globalPosition.dy};
+  }
+
+  /// Vista previa del punto de destino durante el arrastre del kardex.
+  void updateKardexPreview(LatLng? p) {
+    if (p == kardexDropPreview) return;
+    kardexDropPreview = p;
+    notifyListeners();
+  }
 
   /// Geometría terminada esperando «asignar área» (la vista abre el diálogo
   /// y la consume con [consumePendingZoneSpec] al cerrarlo).
@@ -344,8 +391,9 @@ class WorkspaceController extends ChangeNotifier {
       if (finished) await onZoneDrawn();
       return;
     }
-    if (pickMode) {
+    if (pickMode || pickForPerson != null) {
       setProvisional(p);
+      notifyListeners();
       return;
     }
     await selectZoneAt(p);

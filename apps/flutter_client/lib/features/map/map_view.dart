@@ -9,11 +9,16 @@ import 'package:provider/provider.dart';
 import '../../core/app_services.dart';
 import '../../core/net/http_client_factory.dart';
 import '../../core/theme/app_theme.dart';
+import '../auth/auth_controller.dart';
+import '../kardex/kardex_panel.dart';
+import '../persons/location_dialog.dart';
+import '../persons/person.dart';
 import '../zones/zone.dart';
 import '../zones/zone_assign_dialog.dart';
 import '../zones/zone_panel.dart';
 import 'map_drawing.dart';
 import 'map_markers.dart';
+import 'map_modes_panel.dart';
 import 'map_overlay_controls.dart';
 import 'workspace_controller.dart';
 
@@ -55,6 +60,19 @@ class _MapViewState extends State<MapView> {
     ws.addListener(_onWorkspaceChanged);
   }
 
+  /// Toque en el mapa con «Marcar en el mapa» pendiente del kardex:
+  /// abre el diálogo de ubicación con la coordenada tocada (precisa).
+  Future<void> _onMapTap(LatLng p) async {
+    final ws = context.read<WorkspaceController>();
+    await ws.onMapTap(p);
+    final person = ws.pickForPerson;
+    if (person != null && ws.provisional != null && mounted) {
+      final updated = await showLocationDialog(context, person, ws);
+      if (updated != null) ws.replaceSelected(updated);
+      ws.clearPickFor();
+    }
+  }
+
   void _onWorkspaceChanged() {
     final ws = context.read<WorkspaceController>();
     final has = ws.pendingZoneSpec != null;
@@ -88,6 +106,30 @@ class _MapViewState extends State<MapView> {
     super.dispose();
   }
 
+  /// Convierte una posición GLOBAL (puntero de arrastre) en coordenadas
+  /// geográficas del mapa actual.
+  LatLng? _pointToLatLng(Offset global) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return null;
+    return _map.camera.screenOffsetToLatLng(box.globalToLocal(global));
+  }
+
+  /// Suelta del kardex al mapa: coordenada precisa donde caiga la ficha.
+  Future<void> _dropPersonOnMap(DragTargetDetails<Person> details) async {
+    final ws = context.read<WorkspaceController>();
+    final person = details.data;
+    final latlng = _pointToLatLng(details.offset);
+    ws.setKardexDragging(false);
+    if (latlng == null || !mounted) return;
+    ws.setProvisional(latlng);
+    final updated = await showLocationDialog(context, person, ws);
+    if (updated != null) {
+      ws.replaceSelected(updated);
+      await ws.select(updated, center: false);
+    }
+    ws.setProvisional(null);
+  }
+
   void _emitView(MapCamera camera) {
     final b = camera.visibleBounds;
     context.read<WorkspaceController>().onViewChanged(b.west, b.south, b.east, b.north, camera.zoom);
@@ -103,7 +145,13 @@ class _MapViewState extends State<MapView> {
     final drawingTool = ws.drawing.tool;
     return Stack(
       children: [
-        FlutterMap(
+        DragTarget<Person>(
+          key: const Key('kardex-drop-map'),
+          onWillAcceptWithDetails: (_) => ws.kardexDragging,
+          onMove: (details) => ws.updateKardexPreview(_pointToLatLng(details.offset)),
+          onLeave: (_) => ws.updateKardexPreview(null),
+          onAcceptWithDetails: (details) => unawaited(_dropPersonOnMap(details)),
+          builder: (context, candidate, _) => FlutterMap(
           mapController: _map,
           options: MapOptions(
             initialCenter: pkg?.center ?? _villaClara,
@@ -113,7 +161,7 @@ class _MapViewState extends State<MapView> {
             backgroundColor: dark ? const Color(0xFF1D2026) : const Color(0xFFE8E6E1),
             onMapReady: () => _emitView(_map.camera),
             onPositionChanged: (camera, _) => _emitView(camera),
-            onTap: (_, p) => unawaited(ws.onMapTap(p)),
+            onTap: (_, p) => unawaited(_onMapTap(p)),
             onPointerHover: (event, p) {
               _cursor.value = p;
               ws.onMapHover(p);
@@ -147,14 +195,27 @@ class _MapViewState extends State<MapView> {
             if (ws.showPersonnel)
               MarkerLayer(markers: buildPersonnelMarkers(context, ws)),
             MarkerLayer(markers: buildSelectionMarkers(ws)),
+            if (ws.kardexDropPreview != null)
+              MarkerLayer(markers: [
+                Marker(
+                  point: ws.kardexDropPreview!,
+                  width: 44,
+                  height: 44,
+                  child: const Icon(Icons.location_on, size: 40, color: LexairColors.accent),
+                ),
+              ]),
             SimpleAttributionWidget(
               source: Text(pkg?.attribution ?? '© OpenStreetMap contributors',
                   style: const TextStyle(fontSize: 11)),
             ),
           ],
         ),
+        ),
         MapOverlayControls(map: _map, cursor: _cursor),
+        const MapModesPanel(),
         const ZonePanelOverlay(),
+        if (context.watch<AuthController>().user?.can('persons.read') ?? false)
+          const KardexPanel(),
         // Un paquete de prueba nunca debe pasar por cartografía real de Villa Clara.
         if (pkg?.isSynthetic ?? false)
           const Positioned(

@@ -52,6 +52,17 @@ class _ServerSettingsDialogState extends State<ServerSettingsDialog> {
               controller: _url,
               decoration: InputDecoration(labelText: 'Dirección del servidor', errorText: _error),
             ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                key: const Key('local-mode-button'),
+                icon: const Icon(Icons.computer, size: 16),
+                label: const Text('Usar modo local (http://localhost:3000)'),
+                onPressed: () {
+                  setState(() => _url.text = 'http://localhost:3000');
+                },
+              ),
+            ),
             const SizedBox(height: 8),
             Text('El cambio se aplica al reiniciar la aplicación.',
                 style: Theme.of(context).textTheme.bodySmall),

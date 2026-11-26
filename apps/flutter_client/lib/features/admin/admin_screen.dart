@@ -7,6 +7,7 @@ import '../auth/user_profile.dart';
 import 'admin_repository.dart';
 import 'sections/audit_section.dart';
 import 'sections/catalog_sections.dart';
+import 'sections/data_connections_section.dart';
 import 'sections/data_exchange_sections.dart';
 import 'sections/geocoding_admin_sections.dart';
 import 'sections/oracle_section.dart';
@@ -26,7 +27,7 @@ class AdminSectionDef {
   final Widget Function(AdminRepository repo) build;
 }
 
-/// Las 22 secciones del panel. Cada una se muestra solo si el rol tiene
+/// Las 23 secciones del panel. Cada una se muestra solo si el rol tiene
 /// el permiso correspondiente (el servidor lo vuelve a comprobar).
 final List<AdminSectionDef> adminSections = [
   AdminSectionDef('dashboard', 'Resumen', Icons.dashboard_outlined, 'system.status', (r) => DashboardSection(repo: r)),
@@ -47,6 +48,7 @@ final List<AdminSectionDef> adminSections = [
       (r) => SettingsSection(repo: r, title: 'Configuración general', exclude: const ['proximity.', 'map.'])),
   AdminSectionDef('zonecategories', 'Categorías de zona', Icons.category_outlined, 'zones.write', (r) => ZoneCategoriesSection(repo: r)),
   AdminSectionDef('passtypes', 'Tipos de pase', Icons.sticky_note_2_outlined, 'passes.write', (r) => PassTypesSection(repo: r)),
+  AdminSectionDef('connections', 'Conexiones de datos', Icons.lan_outlined, 'system.status', (r) => DataConnectionsSection(repo: r)),
   AdminSectionDef('opsettings', 'Pases, zonas y personal', Icons.tune_outlined, 'settings.manage',
       (r) => SettingsSection(repo: r, title: 'Pases, zonas y personal',
           prefixes: const ['passes.', 'zones.', 'personnel.', 'inmate.'])),
