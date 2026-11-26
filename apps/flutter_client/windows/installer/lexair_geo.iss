@@ -146,12 +146,13 @@ begin
   if CurStep = ssInstall then begin
     Datos := ExpandConstant('{localappdata}\VIGIA\datos');
     if DirExists(Datos) then begin
-      if MsgBox('Se ha detectado una instalación anterior con datos guardados.'
-        #13#10#13#10 '¿Desea CONSERVAR los datos existentes? (Recomendado: conserva '
-        'la base, las zonas y las ubicaciones marcadas.)'
-        #13#10#13#10 'Elija «No» solo si quiere empezar de cero; en ese caso los '
-        'datos anteriores se eliminarán.',
-        'VIGÍA · Datos de una versión anterior', mbYesNo, MB_ICONQUESTION, IDYES) = IDNO then
+      const Mensaje = 'Se ha detectado una instalación anterior con datos guardados.' #13#10#13#10 +
+        '¿Desea CONSERVAR los datos existentes? (Recomendado: conserva la base, ' +
+        'las zonas y las ubicaciones marcadas.)' #13#10#13#10 +
+        'Elija «No» solo si quiere empezar de cero; en ese caso los datos ' +
+        'anteriores se eliminarán.';
+      if MsgBox(Mensaje, 'VIGÍA · Datos de una versión anterior',
+        mbYesNo, MB_ICONQUESTION, IDYES) = IDNO then
         DelTree(Datos, True, True, True);
     end;
   end;
