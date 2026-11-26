@@ -66,8 +66,13 @@ jobs:
           Expand-Archive $gisZip (Join-Path $tmp 'postgis')
           $ctrl = Get-ChildItem (Join-Path $tmp 'postgis') -Recurse -Filter postgis.control | Select-Object -First 1
           if (-not $ctrl) { throw 'postgis.control no encontrado en el paquete' }
-          $payload = $ctrl.Directory.Parent.FullName   # ...\share\extension → raíz del payload
+          # ...\payload\share\extension\postgis.control → raíz del payload (que contiene bin/ y share/)
+          $payload = $ctrl.Directory.Parent.Parent.FullName
+          if (-not (Test-Path (Join-Path $payload 'bin'))) { $payload = $ctrl.Directory.Parent.FullName }
+          if (-not (Test-Path (Join-Path $payload 'bin'))) { throw "raíz del payload PostGIS no identificada: $($ctrl.FullName)" }
+          Write-Host "Payload PostGIS: $payload"
           Copy-Item "$payload\*" $pg -Recurse -Force
+          if (-not (Test-Path "$pg\share\extension\postgis.control")) { throw 'postgis.control no quedó en share/extension' }
 
           # Prueba real: clúster temporal + CREATE EXTENSION postgis
           $test = Join-Path $tmp 'cluster'
