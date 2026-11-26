@@ -151,8 +151,7 @@ begin
         'las zonas y las ubicaciones marcadas.)' #13#10#13#10 +
         'Elija «No» solo si quiere empezar de cero; en ese caso los datos ' +
         'anteriores se eliminarán.';
-      if MsgBox(Mensaje, 'VIGÍA · Datos de una versión anterior',
-        MB_YESNO, MB_ICONQUESTION, IDYES) = IDNO then
+      if MsgBox(Mensaje, mbConfirmation, MB_YESNO) = IDNO then
         DelTree(Datos, True, True, True);
     end;
   end;
