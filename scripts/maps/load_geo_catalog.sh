@@ -31,11 +31,13 @@ CREATE TEMP TABLE s_mun (osm_id bigint, code text, name text, wkt text) ON COMMI
 CREATE TEMP TABLE s_loc (osm_id text, name text, kind text, municipality_osm_id bigint, wkt text) ON COMMIT DROP;
 CREATE TEMP TABLE s_dw (osm_id text, street_name text, house_number text, municipality_osm_id bigint, wkt text) ON COMMIT DROP;
 CREATE TEMP TABLE s_st (osm_id text, street_name text, municipality_osm_id bigint, wkt text) ON COMMIT DROP;
+CREATE TEMP TABLE s_sa (osm_id text, alias text, street_name text, municipality_osm_id bigint, wkt text) ON COMMIT DROP;
 CREATE TEMP TABLE s_poi (osm_id text, name text, category text, municipality_osm_id bigint, wkt text) ON COMMIT DROP;
 \copy s_mun FROM '$PKG/municipalities.csv' WITH (FORMAT csv, HEADER true)
 \copy s_loc FROM '$PKG/localities.csv' WITH (FORMAT csv, HEADER true)
 \copy s_dw FROM '$PKG/dwellings.csv' WITH (FORMAT csv, HEADER true)
 \copy s_st FROM '$PKG/streets.csv' WITH (FORMAT csv, HEADER true)
+\copy s_sa FROM '$PKG/street_aliases.csv' WITH (FORMAT csv, HEADER true)
 \copy s_poi FROM '$PKG/pois.csv' WITH (FORMAT csv, HEADER true)
 
 INSERT INTO geo.data_sources (code, name, license, attribution, extract_date, sha256, is_synthetic)
@@ -57,6 +59,14 @@ SELECT m.id, s.name, s.kind, ST_GeomFromText(s.wkt, 4326)::geography, s.osm_id, 
 ON CONFLICT (osm_id) DO UPDATE SET municipality_id = EXCLUDED.municipality_id, name = EXCLUDED.name,
   kind = EXCLUDED.kind, centroid = EXCLUDED.centroid;
 DELETE FROM geo.localities l WHERE l.source_code = :'src' AND NOT EXISTS (SELECT 1 FROM s_loc s WHERE s.osm_id = l.osm_id);
+
+-- Alias de nomenclatura antigua (direcciones «por nombre» anteriores).
+-- Solo añade: nunca borra ni toca los alias administrados localmente.
+INSERT INTO geo.street_aliases (alias, street_name, municipality_id)
+SELECT DISTINCT ON (s.alias, s.street_name, m.id) s.alias, s.street_name, m.id
+  FROM s_sa s LEFT JOIN mmap m ON m.osm_id = s.municipality_osm_id
+ WHERE s.alias IS NOT NULL AND s.street_name IS NOT NULL
+ ON CONFLICT (alias_norm, street_norm, coalesce(municipality_id, 0)) DO NOTHING;
 
 -- Localidad más cercana (<= 3 km) para direcciones y calles.
 CREATE TEMP TABLE s_addr ON COMMIT DROP AS

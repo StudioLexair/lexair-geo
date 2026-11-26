@@ -23,13 +23,14 @@ copy_out cat_municipalities "osm_id, code, name, ST_AsText(boundary) AS wkt" mun
 copy_out cat_localities "osm_id, name, kind, municipality_osm_id, ST_AsText(geom) AS wkt" localities.csv
 copy_out cat_dwellings "osm_id, street_name, house_number, municipality_osm_id, ST_AsText(geom) AS wkt" dwellings.csv
 copy_out cat_streets "osm_id, street_name, municipality_osm_id, ST_AsText(geom) AS wkt" streets.csv
+copy_out cat_street_aliases "osm_id, alias, street_name, municipality_osm_id, ST_AsText(geom) AS wkt" street_aliases.csv
 copy_out cat_pois "osm_id, name, category, municipality_osm_id, ST_AsText(geom) AS wkt" pois.csv
 
 echo "[2/3] Calculando sumas de verificación"
 PBF_SHA=$(sha256sum "$PBF" | cut -d' ' -f1)
 REPL_TS=$(q "SELECT value FROM osm2pgsql_properties WHERE property = 'replication_timestamp'" || true)
 files_json=""
-for f in municipalities localities dwellings streets pois; do
+for f in municipalities localities dwellings streets street_aliases pois; do
   sha=$(sha256sum "$OUT/$f.csv" | cut -d' ' -f1)
   rows=$(( $(wc -l < "$OUT/$f.csv") - 1 ))
   files_json+="${files_json:+,}\"$f\":{\"file\":\"$f.csv\",\"sha256\":\"$sha\",\"rows\":$rows}"

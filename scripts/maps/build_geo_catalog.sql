@@ -70,6 +70,37 @@ SELECT 'wg' || first_way AS osm_id, name AS street_name, municipality_osm_id, wa
        ST_ClosestPoint(geom, ST_Centroid(geom))::geometry(Point, 4326) AS geom
   FROM g;
 
+-- 4b. Alias de nomenclatura antigua/alternativa de las vías: direcciones
+--     «por nombre» anteriores a la numeración actual (letras/números).
+--     Cada alias apunta al nombre OSM vigente del tramo y hereda su punto.
+DROP TABLE IF EXISTS cat_street_aliases;
+CREATE TABLE cat_street_aliases AS
+WITH src AS (
+  SELECT r.way_id, r.name AS street_name, m.osm_id AS municipality_osm_id, r.geom,
+         a AS alias
+    FROM osm_roads r
+    JOIN cat_municipalities m
+      ON ST_Intersects(m.boundary, ST_PointOnSurface(r.geom))
+   CROSS JOIN LATERAL unnest(ARRAY[
+         (SELECT (x) FROM unnest(string_to_array(coalesce(r.old_name, ''), ';')) AS t(x)
+           WHERE btrim(x) <> '' LIMIT 1),
+         (SELECT (x) FROM unnest(string_to_array(coalesce(r.alt_name, ''), ';')) AS t(x)
+           WHERE btrim(x) <> '' LIMIT 1)]) AS a
+   WHERE r.name IS NOT NULL AND r.old_name IS NOT NULL OR r.name IS NOT NULL AND r.alt_name IS NOT NULL
+), c AS (
+  SELECT s.*, ST_ClusterDBSCAN(ST_Transform(geom, 3857), eps => 250 / cos(radians(22.4)), minpoints => 1)
+           OVER (PARTITION BY street_name, municipality_osm_id, alias) AS grp
+    FROM src s
+), g AS (
+  SELECT min(way_id) AS first_way, alias, street_name, municipality_osm_id, grp,
+         ST_ClosestPoint(ST_Collect(geom), ST_Centroid(ST_Collect(geom)))::geometry(Point,4326) AS geom
+    FROM c GROUP BY alias, street_name, municipality_osm_id, grp
+)
+SELECT 'wg' || first_way AS osm_id, btrim(alias) AS alias, street_name, municipality_osm_id, geom
+  FROM g
+ WHERE btrim(alias) <> '' AND btrim(alias) <> street_name;
+CREATE INDEX ON cat_street_aliases USING gist (geom);
+
 -- 5. Puntos de interés con nombre.
 DROP TABLE IF EXISTS cat_pois;
 CREATE TABLE cat_pois AS

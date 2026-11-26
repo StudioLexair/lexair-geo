@@ -12,6 +12,8 @@ tables.roads = osm2pgsql.define_way_table('osm_roads', {
   { column = 'name', type = 'text' },
   { column = 'ref', type = 'text' },
   { column = 'layer', type = 'int' },
+  { column = 'old_name', type = 'text' },
+  { column = 'alt_name', type = 'text' },
   { column = 'geom', type = 'linestring', projection = srid, not_null = true },
 })
 
@@ -121,8 +123,12 @@ end
 function osm2pgsql.process_way(object)
   local t = object.tags
   if t.highway and t.area ~= 'yes' then
+    -- Nomenclatura: nombre actual + denominaciones antiguas/alternativas
+    -- (direcciones «por nombre» anteriores a la numeración por letras).
     tables.roads:insert({ highway = t.highway, name = t.name, ref = t.ref,
-                          layer = tonumber(t.layer), geom = object:as_linestring() })
+                          layer = tonumber(t.layer),
+                          old_name = t.old_name, alt_name = t.alt_name,
+                          geom = object:as_linestring() })
   end
   if t.railway == 'rail' or t.railway == 'narrow_gauge' then
     tables.rail:insert({ railway = t.railway, name = t.name, geom = object:as_linestring() })

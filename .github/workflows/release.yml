@@ -87,12 +87,17 @@ jobs:
       - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           tag_name: v${{ needs.meta.outputs.version }}
-          name: LEXAIR GEO ${{ needs.meta.outputs.version }}
+          name: VIGÍA (Lexair Geo) ${{ needs.meta.outputs.version }}
           draft: true
           prerelease: false
           files: artifacts/*
           body: |
             Borrador generado por CI. Revise y pruebe antes de publicar internamente.
+
+            Contenido: instalador Windows (Vigia-{versión}-Setup-x64.exe), ZIP portable
+            (Vigia-{versión}-windows-x64-portable.zip), cliente Web (lexair-geo-web-*)
+            y paquete de servidor (lexair-geo-server-*). El paquete cartográfico y el
+            catálogo se generan por separado (workflow build-map, ver docs/MAP_DATA.md).
             - Paquete de servidor offline (sin mapas; ver docs/MAP_DATA.md)
             - Cliente Windows: ZIP portable e instalador offline
             Datos cartográficos © OpenStreetMap contributors (ODbL 1.0).
