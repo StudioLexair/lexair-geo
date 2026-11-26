@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/config/app_config.dart';
@@ -9,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../admin/admin_screen.dart';
 import '../auth/auth_controller.dart';
 import '../map/workspace_controller.dart';
+import '../search/global_search_overlay.dart';
 import 'connection_badge.dart';
 import 'workspace_screen.dart';
 
@@ -37,7 +39,12 @@ class _AppShellState extends State<AppShell> {
     final user = auth.user!;
     final showAdmin = user.isAdminArea;
     final index = showAdmin ? _index : 0;
-    return Scaffold(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            () => unawaited(showGlobalSearch(context)),
+      },
+      child: Scaffold(
       body: Row(children: [
         NavigationRail(
           backgroundColor: LexairColors.sidebar,
@@ -75,6 +82,12 @@ class _AppShellState extends State<AppShell> {
                         backgroundColor: Color(0xFFFFE0B2)),
                   ),
                 const Spacer(),
+                IconButton(
+                  key: const Key('global-search'),
+                  tooltip: 'Búsqueda global (Ctrl+K)',
+                  icon: const Icon(Icons.search, color: Colors.white70),
+                  onPressed: () => unawaited(showGlobalSearch(context)),
+                ),
                 const ConnectionBadge(),
                 const SizedBox(width: 16),
                 PopupMenuButton<String>(
@@ -104,6 +117,7 @@ class _AppShellState extends State<AppShell> {
           ]),
         ),
       ]),
+      ),
     );
   }
 }

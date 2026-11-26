@@ -28,9 +28,13 @@ class ApiClient {
   };
 
   Uri uri(String path, [Map<String, Object?>? query]) {
-    final q = <String, String>{};
+    final q = <String, Object?>{};
     query?.forEach((k, v) {
-      if (v != null && '$v'.isNotEmpty) q[k] = '$v';
+      if (v is List) {
+        if (v.isNotEmpty) q[k] = v.map((e) => '$e').toList(); // parámetro repetido
+      } else if (v != null && '$v'.isNotEmpty) {
+        q[k] = '$v';
+      }
     });
     return Uri.parse('$baseUrl$path').replace(queryParameters: q.isEmpty ? null : q);
   }
