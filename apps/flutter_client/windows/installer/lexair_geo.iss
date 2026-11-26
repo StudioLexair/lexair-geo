@@ -41,9 +41,7 @@ DefaultDirName={autopf}\LexairGeo
 DefaultGroupName=VIGÍA
 DisableProgramGroupPage=yes
 OutputDir={#OutDir}
-#if Modo == "cliente"
-OutputBaseFilename=Vigia-{#AppVersion}-Cliente-x64
-#elseif Modo == "servidor"
+#if Modo == "servidor"
 OutputBaseFilename=Vigia-{#AppVersion}-Servidor-x64
 #else
 OutputBaseFilename=Vigia-{#AppVersion}-TodoEnUno-x64
@@ -51,6 +49,7 @@ OutputBaseFilename=Vigia-{#AppVersion}-TodoEnUno-x64
 ; Cliente (pequeño): máxima compresión. Paquetes grandes (pg/node): nivel
 ; normal para extraer bastante más rápido a cambio de poco tamaño extra.
 #if Modo == "cliente"
+OutputBaseFilename=Vigia-{#AppVersion}-Cliente-x64
 Compression=lzma2/max
 #else
 Compression=lzma2/normal
