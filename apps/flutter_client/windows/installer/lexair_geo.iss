@@ -41,19 +41,22 @@ DefaultDirName={autopf}\LexairGeo
 DefaultGroupName=VIGÍA
 DisableProgramGroupPage=yes
 OutputDir={#OutDir}
-#if Modo == "servidor"
-OutputBaseFilename=Vigia-{#AppVersion}-Servidor-x64
-#else
-OutputBaseFilename=Vigia-{#AppVersion}-TodoEnUno-x64
-#endif
-; Cliente (pequeño): máxima compresión. Paquetes grandes (pg/node): nivel
-; normal para extraer bastante más rápido a cambio de poco tamaño extra.
+; Nombre de fichero y compresión según el modo:
+; · Cliente (pequeño): máxima compresión. · Paquetes grandes (pg/node):
+; nivel normal para extraer bastante más rápido a cambio de poco tamaño.
 #if Modo == "cliente"
-OutputBaseFilename=Vigia-{#AppVersion}-Cliente-x64
-Compression=lzma2/max
+#define FicheroSalida "Vigia-" + AppVersion + "-Cliente-x64"
+#define NivelCompresion "lzma2/max"
 #else
-Compression=lzma2/normal
+#if Modo == "servidor"
+#define FicheroSalida "Vigia-" + AppVersion + "-Servidor-x64"
+#else
+#define FicheroSalida "Vigia-" + AppVersion + "-TodoEnUno-x64"
 #endif
+#define NivelCompresion "lzma2/normal"
+#endif
+OutputBaseFilename={#FicheroSalida}
+Compression={#NivelCompresion}
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -193,8 +196,14 @@ end;
 // ---------------------------------------------------------------------------
 procedure FondoColocar;
 begin
-  FondoBienvenida.BoundsRect := WizardForm.WelcomePage.ClientRect;
-  FondoFinal.BoundsRect := WizardForm.FinishedPage.ClientRect;
+  FondoBienvenida.Left := 0;
+  FondoBienvenida.Top := 0;
+  FondoBienvenida.Width := WizardForm.WelcomePage.ClientWidth;
+  FondoBienvenida.Height := WizardForm.WelcomePage.ClientHeight;
+  FondoFinal.Left := 0;
+  FondoFinal.Top := 0;
+  FondoFinal.Width := WizardForm.FinishedPage.ClientWidth;
+  FondoFinal.Height := WizardForm.FinishedPage.ClientHeight;
 end;
 
 procedure FondoCargar;
