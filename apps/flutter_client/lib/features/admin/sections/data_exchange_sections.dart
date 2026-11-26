@@ -146,8 +146,9 @@ class _ImportSectionState extends State<ImportSection> {
       Text('Importar personas (CSV)', style: Theme.of(context).textTheme.titleLarge),
       const SizedBox(height: 8),
       const Text('Columnas obligatorias: code, given_names, family_names, data_source. Opcionales: phone, '
-          'notes, lat, lon, address_text, municipality, precision_level, consent_status. Codificación '
-          'UTF-8; máximo 50 000 filas. Las ubicaciones importadas nunca quedan como «exacta verificada».'),
+          'notes, cdr, defense_zone, lat, lon, address_text, municipality, precision_level, '
+          'consent_status. Codificación UTF-8; máximo 50 000 filas. Las ubicaciones importadas '
+          'nunca quedan como «exacta verificada».'),
       const SizedBox(height: 12),
       Row(children: [
         OutlinedButton.icon(onPressed: _pick, icon: const Icon(Icons.attach_file), label: const Text('Elegir CSV')),

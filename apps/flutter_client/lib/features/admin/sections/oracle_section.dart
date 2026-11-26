@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../admin_repository.dart';
+import '../../../core/config/terminologia.dart';
 import '../admin_widgets.dart';
 
 /// Sección 18: conectores Oracle 11g. Configuración de conexión (host, puerto,
@@ -28,11 +29,11 @@ class OracleSection extends StatelessWidget {
     ],
     builder: (context, items, reload) => Column(children: [
       Expanded(child: items.isEmpty
-        ? const Center(child: Text(
+        ? Center(child: Text(
             'No hay conectores. Cree uno, configure sus mappings (tabla Oracle → '
-            'personas, internos, personal o pases) y ej «Probar conexión».',
+            'personas, ${T.sujetoPlural.toLowerCase()}, personal o ${T.pasePlural.toLowerCase()}) y ej «Probar conexión».',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey)))
+            style: const TextStyle(color: Colors.grey)))
         : ListView(padding: const EdgeInsets.all(12), children: [
             for (final c in items)
               Card(child: Padding(
@@ -140,8 +141,8 @@ class OracleSection extends StatelessWidget {
       final r = await repo.runOracleConnector(id, dryRun: dryRun);
       messenger.showSnackBar(SnackBar(content: Text(
         '${dryRun ? 'Simulación' : 'Sincronización'} (${r['status']}): '
-        'personas ${r['persons']}, internos ${r['inmates']}, '
-        'personal ${r['personnel']}, pases ${r['passes']}'
+        'personas ${r['persons']}, ${T.sujetoPlural.toLowerCase()} ${r['inmates']}, '
+        'personal ${r['personnel']}, ${T.pasePlural.toLowerCase()} ${r['passes']}'
         '${r['error'] != null ? '\n${r['error']}' : ''}')));
       reload();
     } catch (e) {
@@ -169,8 +170,8 @@ class OracleSection extends StatelessWidget {
                       leading: Icon(_statusIcon('${r['status']}')),
                       title: Text('${fmtDate(r['startedAt'])} · ${r['status']}${r['dryRun'] == true ? ' (simulación)' : ''}'),
                       subtitle: Text(
-                        'personas ${r['persons'] ?? 0}, internos ${r['inmates'] ?? 0}, '
-                        'personal ${r['personnel'] ?? 0}, pases ${r['passes'] ?? 0} · '
+                        'personas ${r['persons'] ?? 0}, ${T.sujetoPlural.toLowerCase()} ${r['inmates'] ?? 0}, '
+                        'personal ${r['personnel'] ?? 0}, ${T.pasePlural.toLowerCase()} ${r['passes'] ?? 0} · '
                         'leídas ${r['rowsRead'] ?? 0}, saltadas ${r['rowsSkipped'] ?? 0}'
                         '${r['errorText'] != null ? '\n${r['errorText']}' : ''}'),
                     ),

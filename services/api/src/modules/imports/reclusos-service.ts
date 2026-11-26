@@ -59,6 +59,7 @@ export async function importReclusos(
       address,
       muniId,
       internCode,
+      cdr: (r.cdr || '').trim() || null,
       facility: r.unidad || null,
       ingreso: r.fecIngresoReal ? `Ingreso real: ${r.fecIngresoReal}` : null,
       municipio: r.municipio || null,
@@ -77,18 +78,20 @@ export async function importReclusos(
     const data = JSON.stringify(batch.map((r) => ({
       code: r.code, given: r.given, family: r.family, address: r.address,
       muniId: r.muniId, internCode: r.internCode, facility: r.facility, ingreso: r.ingreso,
+      cdr: r.cdr,
     })));
     const inserted = await withTransaction(ctx.db, async (c: DbClient) => {
       const up = await c.query<{ n: number }>(
         `WITH src AS (
-           SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(code text, given text, family text)
+           SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(code text, given text, family text, cdr text)
          ), up AS (
-           INSERT INTO directory.persons (code, given_names, family_names, data_source,
+           INSERT INTO directory.persons (code, given_names, family_names, data_source, cdr,
              consent_status, consent_recorded_at, created_by)
-           SELECT code, given, family, 'reclusos_xml', 'not_required', now(), $2
+           SELECT code, given, family, 'reclusos_xml', cdr, 'not_required', now(), $2
              FROM src
            ON CONFLICT (code) DO UPDATE SET given_names = EXCLUDED.given_names,
              family_names = EXCLUDED.family_names, data_source = EXCLUDED.data_source,
+             cdr = coalesce(EXCLUDED.cdr, directory.persons.cdr),
              is_active = true
            RETURNING id, code
          ), mem AS (

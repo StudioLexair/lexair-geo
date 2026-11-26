@@ -111,6 +111,7 @@ jobs:
           Copy-Item 'services\api\package.json','services\api\package-lock.json' "$srv\api\"
           Copy-Item 'datos\catalogo_vc\cargar_catalogo.sql' "$srv\sql\cargar_catalogo.sql"
           Copy-Item 'apps\flutter_client\windows\servidor\LEEME.txt' "$srv\LEEME.txt"
+          Copy-Item 'apps\flutter_client\windows\servidor\terminologia.ejemplo.json' "$srv\terminologia.ejemplo.json"
           Copy-Item 'apps\flutter_client\windows\servidor\mapa\LEEME-MAPAS.txt' "$srv\mapa\LEEME-MAPAS.txt"
           Copy-Item 'datos\ejemplo\*' "$rel\datos_ejemplo\"
           $sz = [math]::Round((Get-ChildItem $srv -Recurse | Measure-Object Length -Sum).Sum / 1MB)

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'core/config/config_store.dart';
+import 'core/config/terminologia.dart';
 import 'core/runtime/local_runtime.dart';
 import 'features/bootstrap/bootstrap_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Terminología editable desde terminologia.json (valores por defecto si no existe).
+  await Terminologia.I.load();
   final store = ConfigStore();
   final config = await store.load();
   // «Todo en uno»: si el paquete incluye un servidor integrado y el usuario

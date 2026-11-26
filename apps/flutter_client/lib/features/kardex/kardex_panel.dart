@@ -11,6 +11,7 @@ import '../map/map_markers.dart' show fmtDateIso;
 import '../map/workspace_controller.dart';
 import '../persons/location_dialog.dart';
 import '../persons/person.dart';
+import '../../core/config/terminologia.dart';
 import '../passes/pass.dart';
 
 /// Kardex junto al mapa: todas las personas cargadas, con foto (o iniciales)
@@ -118,18 +119,19 @@ class _KardexPanelState extends State<KardexPanel> {
           borderRadius: BorderRadius.circular(8),
           color: LexairColors.sidebar,
           child: Tooltip(
-            message: 'Abrir kardex de internos',
+            message: 'Abrir ${T.kardexTitulo.toLowerCase()}',
             child: InkWell(
               key: const Key('kardex-open'),
               borderRadius: BorderRadius.circular(8),
               onTap: () => ws.setKardexOpen(true),
-              child: const Padding(
-                padding: EdgeInsets.all(10),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.menu_book_outlined, color: Colors.white, size: 22),
-                  SizedBox(height: 4),
+                  const Icon(Icons.menu_book_outlined, color: Colors.white, size: 22),
+                  const SizedBox(height: 4),
                   RotatedBox(quarterTurns: 1,
-                      child: Text('KARDEX', style: TextStyle(color: Colors.white, fontSize: 11, letterSpacing: 1))),
+                      child: Text(T.kardexTituloCorto,
+                          style: const TextStyle(color: Colors.white, fontSize: 11, letterSpacing: 1))),
                 ]),
               ),
             ),
@@ -155,8 +157,8 @@ class _KardexPanelState extends State<KardexPanel> {
             child: Row(children: [
               const Icon(Icons.menu_book_outlined, size: 18, color: Colors.white),
               const SizedBox(width: 8),
-              const Expanded(child: Text('Kardex de internos',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14))),
+              Expanded(child: Text(T.kardexTitulo,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14))),
               IconButton(
                 key: const Key('kardex-close'),
                 tooltip: 'Minimizar',
@@ -337,7 +339,7 @@ class _KardexPersonModalState extends State<_KardexPersonModal> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.isForbidden ? 'Sin permiso para consultar internos y pases.' : e.userMessage;
+        _error = e.isForbidden ? 'Sin permiso para consultar ${T.sujetoPlural.toLowerCase()} y ${T.pasePlural.toLowerCase()}.' : e.userMessage;
         _loadingPasses = false;
       });
     }
@@ -387,7 +389,9 @@ class _KardexPersonModalState extends State<_KardexPersonModal> {
               : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if (_inmate != null)
                     _section('Interno', [
-                      if (_inmate!.internCode != null) _row('Código interno', _inmate!.internCode!),
+                      if (_inmate!.internCode != null) _row('Código de ${T.sujetoSingular.toLowerCase()}', _inmate!.internCode!),
+                  if (widget.person.cdr != null) _row('CDR', widget.person.cdr!),
+                  if (widget.person.defenseZone != null) _row('Zona de defensa', widget.person.defenseZone!),
                       _row('Centro', _inmate!.facility ?? '—'),
                       _row('Estado', _inmate!.status ?? '—'),
                       if (_inmate!.riskLevel != null) _row('Riesgo', _inmate!.riskLevel!),
@@ -406,8 +410,8 @@ class _KardexPersonModalState extends State<_KardexPersonModal> {
                             style: const TextStyle(fontSize: 12))),
                         ]),
                       ),
-                    if (_passes.isEmpty) const Text('Sin pases registrados.',
-                        style: TextStyle(fontSize: 12, color: LexairColors.muted)),
+                    if (_passes.isEmpty) Text('Sin ${T.pasePlural.toLowerCase()} registrados.',
+                        style: const TextStyle(fontSize: 12, color: LexairColors.muted)),
                   ]),
                 ]),
           const SizedBox(height: 8),

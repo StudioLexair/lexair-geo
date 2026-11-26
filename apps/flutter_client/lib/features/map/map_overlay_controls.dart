@@ -9,6 +9,7 @@ import '../../core/util/labels.dart';
 import '../auth/auth_controller.dart';
 import 'map_drawing.dart';
 import 'workspace_controller.dart';
+import '../../core/config/terminologia.dart';
 
 /// Controles flotantes: herramientas de dibujo de zonas, zoom, selector de
 /// capas (personas, zonas, pases, personal), filtro de grupos y lectura de
@@ -215,7 +216,9 @@ class _LayerSelector extends StatelessWidget {
         CheckedPopupMenuItem(value: 'toggle-persons', checked: ws.showPersons, child: const Text('Personas')),
         CheckedPopupMenuItem(value: 'toggle-zones', checked: ws.showZones, child: const Text('Zonas dibujadas')),
         CheckedPopupMenuItem(value: 'toggle-passes', checked: ws.showPasses && !ws.passesHidden,
-            child: Text(ws.passesHidden ? 'Pases activos (oculto: sin permiso de ubicación)' : 'Pases activos')),
+            child: Text(ws.passesHidden
+                ? '${T.pasePlural} activos (oculto: sin permiso de ubicación)'
+                : '${T.pasePlural} activos')),
         CheckedPopupMenuItem(value: 'toggle-personnel', checked: ws.showPersonnel, child: const Text('Personal de la fuerza')),
         const PopupMenuDivider(),
         CheckedPopupMenuItem(value: 'groups:all', checked: ws.groupFilter == 'all',

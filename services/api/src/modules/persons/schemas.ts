@@ -32,6 +32,8 @@ export const CreatePersonBody = z.object({
   familyNames: name,
   phone: z.string().trim().regex(/^[0-9 +()-]{5,25}$/).nullish(),
   notes: z.string().trim().max(2000).nullish(),
+  cdr: z.string().trim().max(120).nullish(),
+  defenseZone: z.string().trim().max(120).nullish(),
   groups: groupsArray,
   visibility: z.enum(['normal', 'restricted']).default('normal'),
   consentStatus: z.enum(['granted', 'not_required', 'pending', 'revoked']).default('pending'),

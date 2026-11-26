@@ -1,9 +1,13 @@
 /// Versión web/plataformas sin soporte del servidor integrado.
 class LocalRuntimePlan {
   const LocalRuntimePlan();
-  String get serverUrl => 'http://127.0.0.1:3000';
+  final int puertoApi = 3000;
+  final int puertoBd = 5433;
+  String get serverUrl => 'http://127.0.0.1:$puertoApi';
 }
 
 Future<LocalRuntimePlan?> detectServidorIntegrado() async => null;
 
-Future<LocalRuntimePlan?> ensureServidorIntegrado({void Function(String)? onLog}) async => null;
+Future<LocalRuntimePlan?> ensureServidorIntegrado(
+    {void Function(String)? onLog, void Function(String paso, String estado)? onPaso}) async =>
+    null;

@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/util/labels.dart';
 import '../map/workspace_controller.dart';
 import '../persons/person.dart';
+import '../../core/config/terminologia.dart';
 import 'pass.dart';
 
 /// Diálogo de «Conceder pase» (fechas, tipo, zona autorizada, notas) y de
@@ -128,7 +129,7 @@ class _PassFormDialogState extends State<_PassFormDialog> {
         'authorizedAddress': _address.text.trim().isEmpty ? null : _address.text.trim(),
         'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       });
-      messenger.showSnackBar(const SnackBar(content: Text('Pase concedido')));
+      messenger.showSnackBar(SnackBar(content: Text('${T.paseSingular} concedido')));
       navigator.pop(true);
     } on ApiException catch (e) {
       setState(() {
@@ -141,14 +142,14 @@ class _PassFormDialogState extends State<_PassFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Conceder pase · ${widget.person.fullName}'),
+      title: Text('Conceder ${T.paseSingular.toLowerCase()} · ${widget.person.fullName}'),
       content: SizedBox(
         width: 440,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           DropdownButtonFormField<int>(
             initialValue: _typeId,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Tipo de pase'),
+            decoration: InputDecoration(labelText: 'Tipo de ${T.paseSingular.toLowerCase()}'),
             items: [for (final t in _types) DropdownMenuItem(value: t.id, child: Text(t.name))],
             onChanged: (v) => setState(() {
               _typeId = v;
@@ -282,7 +283,7 @@ class _InmateFormDialogState extends State<_InmateFormDialog> {
         'riskLevel': _risk,
         'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       });
-      messenger.showSnackBar(const SnackBar(content: Text('Persona registrada como interno')));
+      messenger.showSnackBar(SnackBar(content: Text('Registrada como ${T.sujetoSingular.toLowerCase()}')));
       navigator.pop(true);
     } on ApiException catch (e) {
       setState(() {
@@ -295,13 +296,13 @@ class _InmateFormDialogState extends State<_InmateFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Registrar como interno · ${widget.person.fullName}'),
+      title: Text('Registrar como ${T.sujetoSingular.toLowerCase()} · ${widget.person.fullName}'),
       content: SizedBox(
         width: 420,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
             controller: _internCode,
-            decoration: const InputDecoration(labelText: 'Código de interno (opcional)'),
+            decoration: const InputDecoration(labelText: 'Código (opcional)'),
           ),
           const SizedBox(height: 8),
           TextField(controller: _facility, decoration: const InputDecoration(labelText: 'Centro penitenciario')),

@@ -6,7 +6,7 @@ import { PersonCodeSchema } from '../persons/schemas.js';
 
 export const REQUIRED_COLUMNS = ['code', 'given_names', 'family_names', 'data_source'] as const;
 export const OPTIONAL_COLUMNS = [
-  'phone', 'notes', 'lat', 'lon', 'address_text', 'municipality', 'precision_level', 'consent_status',
+  'phone', 'notes', 'cdr', 'defense_zone', 'lat', 'lon', 'address_text', 'municipality', 'precision_level', 'consent_status',
 ] as const;
 export const MAX_ROWS = 50_000;
 
@@ -19,6 +19,8 @@ const RowSchema = z.object({
   data_source: z.string().trim().min(2).max(120),
   phone: z.preprocess(emptyToNull, z.string().trim().regex(/^[0-9 +()-]{5,25}$/).nullable().default(null)),
   notes: z.preprocess(emptyToNull, z.string().trim().max(2000).nullable().default(null)),
+  cdr: z.preprocess(emptyToNull, z.string().trim().max(120).nullable().default(null)),
+  defense_zone: z.preprocess(emptyToNull, z.string().trim().max(120).nullable().default(null)),
   lat: z.preprocess(emptyToNull, z.coerce.number().nullable().default(null)),
   lon: z.preprocess(emptyToNull, z.coerce.number().nullable().default(null)),
   address_text: z.preprocess(emptyToNull, z.string().trim().max(300).nullable().default(null)),

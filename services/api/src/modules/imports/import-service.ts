@@ -17,18 +17,20 @@ export async function importRows(db: Db, rows: ImportRow[], groupId: number, use
       await c.query(
         `WITH src AS (
            SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(code text, given_names text, family_names text,
-             data_source text, phone text, notes text, consent_status text)
+             data_source text, phone text, notes text, cdr text, defense_zone text, consent_status text)
          ), up AS (
-           INSERT INTO directory.persons (code, given_names, family_names, data_source, phone, notes,
+           INSERT INTO directory.persons (code, given_names, family_names, data_source, phone, notes, cdr, defense_zone,
              consent_status, consent_recorded_at, created_by)
-           SELECT code, given_names, family_names, data_source, phone, notes,
+           SELECT code, given_names, family_names, data_source, phone, notes, cdr, defense_zone,
                   coalesce(consent_status, 'pending'),
                   CASE WHEN consent_status = 'granted' THEN now() END, $3
              FROM src
            ON CONFLICT (code) DO UPDATE SET given_names = EXCLUDED.given_names,
              family_names = EXCLUDED.family_names, data_source = EXCLUDED.data_source,
              phone = coalesce(EXCLUDED.phone, directory.persons.phone),
-             notes = coalesce(EXCLUDED.notes, directory.persons.notes)
+             notes = coalesce(EXCLUDED.notes, directory.persons.notes),
+             cdr = coalesce(EXCLUDED.cdr, directory.persons.cdr),
+             defense_zone = coalesce(EXCLUDED.defense_zone, directory.persons.defense_zone)
            RETURNING id
          )
          INSERT INTO directory.person_memberships (person_id, group_id, source, added_by)

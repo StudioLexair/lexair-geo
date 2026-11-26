@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/config/config_store.dart';
+import '../../core/config/terminologia.dart';
 import '../../core/net/api_client.dart';
 import '../../core/net/http_client_factory.dart';
 import '../../core/runtime/local_runtime.dart';
@@ -10,7 +11,7 @@ import '../../app.dart';
 import '../../core/app_services.dart';
 
 /// Pantalla de arranque del «todo en uno»: levanta el servidor integrado
-/// (PostgreSQL + API) antes de mostrar la pantalla de acceso. Solo aparece
+/// (base de datos + API) antes de mostrar la pantalla de acceso. Solo aparece
 /// cuando el paquete Windows incluye la carpeta `servidor/`.
 class BootstrapScreen extends StatefulWidget {
   const BootstrapScreen({super.key, required this.onDone});
@@ -22,43 +23,108 @@ class BootstrapScreen extends StatefulWidget {
   State<BootstrapScreen> createState() => _BootstrapScreenState();
 }
 
+class _PasoDef {
+  const _PasoDef(this.key, this.label);
+  final String key;
+  final String label;
+}
+
+const List<_PasoDef> _pasos = [
+  _PasoDef('bd', 'Base de datos local'),
+  _PasoDef('esquema', 'Esquema y migraciones'),
+  _PasoDef('catalogo', 'Datos del territorio'),
+  _PasoDef('cuenta', 'Cuenta de acceso'),
+  _PasoDef('api', 'Servidor local'),
+];
+
 class _BootstrapScreenState extends State<BootstrapScreen> {
+  final Map<String, String> _estado = {};
   final List<String> _log = [];
+  final List<int> _puertos = [];
   String? _error;
   bool _busy = true;
+  int _segundos = 0;
 
   @override
   void initState() {
     super.initState();
     _arrancar();
+    Stream.periodic(const Duration(seconds: 1)).listen((_) {
+      if (mounted && _busy) setState(() => _segundos++);
+    });
   }
+
+  bool _esLocal(String url) =>
+      url == 'https://geo.internal' ||
+      url.startsWith('http://127.0.0.1') ||
+      url.startsWith('http://localhost');
 
   Future<void> _arrancar() async {
     setState(() {
       _busy = true;
       _error = null;
+      _estado.clear();
       _log.clear();
+      _segundos = 0;
     });
     try {
-      final plan = await ensureServidorIntegrado(onLog: (m) {
-        setState(() => _log.add(m));
-      });
+      final plan = await ensureServidorIntegrado(
+        onLog: (m) {
+          if (!mounted) return;
+          setState(() => _log.add(m));
+        },
+        onPaso: (k, e) {
+          if (!mounted) return;
+          setState(() => _estado[k] = e);
+        },
+      );
       final store = ConfigStore();
       var config = await store.load();
-      if (plan != null &&
-          (config.serverUrl == 'https://geo.internal' ||
-              config.serverUrl == plan.serverUrl)) {
+      if (plan != null && _esLocal(config.serverUrl)) {
         await store.saveOverride(plan.serverUrl);
         config = await store.load();
+        if (mounted) setState(() => _puertos.add(plan.puertoApi));
       }
       if (!mounted) return;
       widget.onDone(config, store);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _busy = false;
         _error = e.toString();
         _log.add('ERROR: $e');
       });
+    }
+  }
+
+  Widget _icono(String estado) {
+    switch (estado) {
+      case 'listo':
+      case 'omitido':
+        return const Icon(Icons.check_circle, color: LexairColors.ok, size: 20);
+      case 'error':
+        return Icon(Icons.error, color: Theme.of(context).colorScheme.error, size: 20);
+      case 'iniciando':
+        return const SizedBox(
+            width: 16, height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2, color: LexairColors.accent));
+      default:
+        return const Icon(Icons.radio_button_unchecked, color: Colors.white24, size: 20);
+    }
+  }
+
+  String _textoEstado(String estado) {
+    switch (estado) {
+      case 'listo':
+        return 'listo';
+      case 'omitido':
+        return 'ya estaba';
+      case 'error':
+        return 'con problemas';
+      case 'iniciando':
+        return 'iniciando…';
+      default:
+        return 'pendiente';
     }
   }
 
@@ -70,7 +136,7 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
         backgroundColor: LexairColors.sidebar,
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
+            constraints: const BoxConstraints(maxWidth: 540),
             child: Padding(
               padding: const EdgeInsets.all(32),
               child: Column(
@@ -78,35 +144,59 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    Image.asset('assets/branding/vigia_logo.png',
-                        width: 56, height: 56),
+                    Image.asset('assets/branding/vigia_logo.png', width: 56, height: 56),
                     const SizedBox(width: 14),
-                    const Text('VIGÍA',
-                        style: TextStyle(
+                    Text(T.orgNombre,
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 30,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 2)),
                   ]),
-                  const SizedBox(height: 10),
-                  Text(_error == null && _busy
-                      ? 'Iniciando el servidor integrado…'
-                      : _error == null
-                          ? 'Servidor integrado listo.'
-                          : 'No se pudo iniciar el servidor integrado',
-                      style: const TextStyle(color: Colors.white70, fontSize: 15)),
-                  const SizedBox(height: 20),
-                  if (_busy) const LinearProgressIndicator(
-                      color: LexairColors.accent,
-                      backgroundColor: LexairColors.sidebarActive),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
+                  Text(
+                    _error == null && _busy
+                        ? 'Preparando el sistema… ($_segundos s)'
+                        : _error == null
+                            ? 'Sistema listo.'
+                            : 'No se pudo iniciar el sistema local',
+                    style: const TextStyle(color: Colors.white70, fontSize: 15),
+                  ),
+                  const SizedBox(height: 18),
+                  for (final p in _pasos)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Row(children: [
+                        _icono(_estado[p.key] ?? ''),
+                        const SizedBox(width: 12),
+                        Text(p.label,
+                            style: TextStyle(
+                                color: (_estado[p.key] ?? '') == 'error'
+                                    ? Theme.of(context).colorScheme.error
+                                    : Colors.white,
+                                fontSize: 14.5)),
+                        const Spacer(),
+                        Text(_textoEstado(_estado[p.key] ?? ''),
+                            style: const TextStyle(color: Colors.white38, fontSize: 12.5)),
+                      ]),
+                    ),
+                  const SizedBox(height: 16),
+                  if (_busy)
+                    const LinearProgressIndicator(
+                        color: LexairColors.accent, backgroundColor: LexairColors.sidebarActive),
+                  if (_puertos.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text('Puerto del servidor: ${_puertos.first}',
+                        style: const TextStyle(color: Colors.white38, fontSize: 12.5)),
+                  ],
+                  const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.black26,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    height: 180,
+                    height: _error != null ? 160 : 120,
                     child: ListView(
                       reverse: true,
                       children: [
@@ -114,8 +204,7 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 4),
                             child: Text(l,
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 12.5)),
+                                style: const TextStyle(color: Colors.white54, fontSize: 12)),
                           ),
                       ],
                     ),
@@ -137,7 +226,7 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
                                 final config = await store.load();
                                 widget.onDone(config, store);
                               },
-                        child: const Text('Continuar sin servidor integrado',
+                        child: const Text('Continuar sin servidor local',
                             style: TextStyle(color: Colors.white70)),
                       ),
                     ]),
@@ -174,20 +263,20 @@ class _VigiaRootState extends State<VigiaRoot> {
   late AppServices _services;
   bool _bootstrap = false;
 
+  bool _esLocalOFabrica(String url) =>
+      url == 'https://geo.internal' ||
+      url.startsWith('http://127.0.0.1') ||
+      url.startsWith('http://localhost');
+
   @override
   void initState() {
     super.initState();
     _config = widget.initialConfig;
     _services = _buildServices();
-    // Arranque integrado solo si el servidor configurado es el de fábrica
-    // o el propio puerto local (nunca pisa un servidor interno ya elegido).
-    _bootstrap = widget.plan != null &&
-        (_config.serverUrl == 'https://geo.internal' ||
-            _config.serverUrl == widget.plan!.serverUrl) &&
-        !_apiYaResponde();
+    // Arranque integrado solo si el servidor configurado es el de fábrica o
+    // un servidor local (nuestro puerto puede haber cambiado tras un reinicio).
+    _bootstrap = widget.plan != null && _esLocalOFabrica(_config.serverUrl);
   }
-
-  bool _apiYaResponde() => false; // se comprueba en el propio arranque.
 
   AppServices _buildServices() => AppServices(
         config: _config,

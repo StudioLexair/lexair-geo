@@ -9,6 +9,7 @@ import '../map/map_markers.dart' show fmtDateIso;
 import '../map/map_view.dart';
 import '../map/workspace_controller.dart';
 import 'zone_assign_dialog.dart';
+import '../../core/config/terminologia.dart';
 
 /// Panel superpuesto a la derecha del mapa con el detalle de la zona
 /// seleccionada: presos dentro (por residencia o asignación manual), personal
@@ -63,11 +64,11 @@ class ZonePanelOverlay extends StatelessWidget {
                 ),
               if (z.label != null && z.label!.isNotEmpty)
                 _row('Etiqueta', z.label!),
-              _row('Presos dentro', '${z.membersCount} (manuales: ${z.manualCount})'),
-              _row('Pases activos en el área', '${z.passesInside}'),
+              _row('${T.sujetoPlural} dentro', '${z.membersCount} (manuales: ${z.manualCount})'),
+              _row('${T.pasePlural} activos en el área', '${z.passesInside}'),
               _row('Personal asignado', '${z.personnelCount}'),
               const Divider(height: 20),
-              _sectionTitle(context, 'Presos en esta zona (${ws.zonePersons.length})'),
+              _sectionTitle(context, '${T.sujetoPlural} en esta zona (${ws.zonePersons.length})'),
               for (final p in ws.zonePersons)
                 ListTile(
                   dense: true,
@@ -80,7 +81,7 @@ class ZonePanelOverlay extends StatelessWidget {
                   title: Text(p.name, style: const TextStyle(fontSize: 13)),
                   subtitle: Text([
                     p.code,
-                    if (p.internCode != null) 'Interno ${p.internCode}',
+                    if (p.internCode != null) '${T.sujetoSingular} ${p.internCode}',
                     if (p.riskLevel != null) 'Riesgo ${p.riskLevel}',
                     if (p.phone != null) p.phone!,
                     if (p.viaGeometry && p.viaManual) 'vive dentro + asignado',
@@ -143,7 +144,7 @@ class ZonePanelOverlay extends StatelessWidget {
                 const Text('Sin personal asignado ni residente en el área.',
                     style: TextStyle(fontSize: 13, color: LexairColors.muted)),
               const Divider(height: 20),
-              _sectionTitle(context, 'Pases que se cumplen aquí'),
+              _sectionTitle(context, '${T.pasePlural} que se cumplen aquí'),
               for (final p in ws.zonePasses)
                 ListTile(
                   dense: true,
@@ -159,8 +160,8 @@ class ZonePanelOverlay extends StatelessWidget {
                   onTap: () => ws.selectById(p.personId),
                 ),
               if (ws.zonePasses.isEmpty)
-                const Text('Sin pases en esta zona.',
-                    style: TextStyle(fontSize: 13, color: LexairColors.muted)),
+                Text('Sin ${T.pasePlural.toLowerCase()} en esta zona.',
+                    style: const TextStyle(fontSize: 13, color: LexairColors.muted)),
               const Divider(height: 20),
               if (canWrite)
                 Row(children: [

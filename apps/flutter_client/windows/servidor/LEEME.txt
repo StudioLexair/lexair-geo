@@ -1,23 +1,47 @@
 VIGÍA (Lexair Geo) · Servidor integrado
 =========================================
 
-Este paquete es «todo en uno»: la aplicación cliente incluye un servidor
-completo que se levanta automáticamente al abrir VIGÍA. No necesita Internet
-ni configurar nada para empezar a probar.
+Este paquete es «todo en uno»: la aplicación incluye un servidor completo que
+se levanta automáticamente al abrir VIGÍA. No necesita Internet ni configurar
+nada para empezar a trabajar.
 
 · Qué incluye
-  servidor\pg\      PostgreSQL 17 con PostGIS (base geográfica)
-  servidor\node\    Node.js (motor del API)
-  servidor\api\     API de VIGÍA (migraciones, importador, geocodificación)
-  servidor\sql\     Catálogo de Villa Clara (13 municipios, calles,
-                    viviendas, POI y alias de nomenclatura antigua)
+  servidor\pg\      Base de datos geográfica (PostgreSQL + PostGIS)
+  servidor\node\    Motor del servicio de datos
+  servidor\api\     Servicio de VIGÍA (esquema, importaciones, búsquedas)
+  servidor\sql\     Catálogo del territorio (13 municipios, calles,
+                    viviendas, puntos de interés y alias antiguos)
 
 · Qué hace al arrancar
-  1. Inicia PostgreSQL en el puerto 5433 (solo su máquina, sin red).
-  2. Crea la base lexair_geo con sus migraciones y el catálogo de Villa Clara.
-  3. Crea el administrador inicial:  usuario: yolexis  ·  contraseña: 123k20@A
-     (Cámbiela en Administración → Usuarios cuando empiece a usarla en serio.)
-  4. Inicia el API en http://127.0.0.1:3000 y conecta el cliente a él.
+  1. Inicia la base de datos en el puerto 5433 (solo su máquina).
+  2. Crea la base, sus migraciones y el catálogo del territorio.
+  3. Crea la cuenta inicial:  usuario: yolexis · contraseña: 123k20@A
+     (Cámbiela en Administración → Usuarios cuando empiece a usarla.)
+  4. Inicia el servicio en http://127.0.0.1:3000 y conecta el cliente a él.
+
+· Puertos
+  Si el puerto está ocupado (por otra aplicación o por otra copia), el
+  sistema elige automáticamente el siguiente libre (3001, 3002…) y le avisa
+  en la pantalla de arranque. Para fijarlos usted mismo, cree el fichero
+  %LOCALAPPDATA%\VIGIA\servidor-local.json con este contenido:
+      { "puertoApi": 3000, "puertoBD": 5433 }
+
+· Terminología editable
+  Los nombres que ve en la interfaz (entidades, secciones, títulos) se
+  personalizan con un fichero fácil de editar: terminologia.json en
+  %PROGRAMDATA%\LexairGeo (o junto al ejecutable). Si no existe, se usan
+  nombres neutrales. Ejemplo de contenido:
+      {
+        "sujetoSingular": "Profesor",
+        "sujetoPlural": "Profesores",
+        "paseSingular": "Permiso",
+        "pasePlural": "Permisos",
+        "kardexTitulo": "Profesores",
+        "kardexTituloCorto": "PROFESORES",
+        "importTitulo": "Importar profesores (Excel XML)",
+        "unidadLabel": "Departamento"
+  Cierre y abra VIGÍA para aplicar los cambios. Hay una plantilla de
+  referencia en servidor\terminologia.ejemplo.json.
 
 · Datos y registros
   Los datos se guardan en  %LOCALAPPDATA%\VIGIA\datos  (no se borran al
@@ -26,12 +50,13 @@ ni configurar nada para empezar a probar.
 · Red interna (después de la prueba)
   Para uso real en la red del unidad, apunte el cliente al servidor central
   (botón «Servidor» en la pantalla de acceso) y deje este servidor integrado
-  solo para la máquina de guardia o pruebas. La contraseña JWT del modo
-  integrado es de demostración: no lo exponga a la red.
+  solo para la máquina de guardia o pruebas. No exponga el modo integrado a
+  la red: su clave interna es de demostración.
 
 · Mapas
   Vea servidor\mapa\LEEME-MAPAS.txt para añadir la cartografía offline.
 
-· Oracle / PostGIS externos
-  Administración → Conexiones de datos: pruebe y configure los conectores
-  Oracle (cuadros/reclusos) y PostGIS (sincronización) de la red.
+· Conexiones externas
+  Administración → Conexiones de datos: configure la base de origen con el
+  botón «Configurar» (servidor, puerto, servicio, usuario y contraseña) y
+  pruebe la conexión antes de aplicar.

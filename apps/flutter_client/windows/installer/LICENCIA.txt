@@ -1,0 +1,22 @@
+VIGÍA (Lexair Geo) — Licencia de uso interno
+============================================
+
+Copyright © Studio Lexair. Todos los derechos reservados.
+
+1. Este programa se distribuye únicamente a personal autorizado de la
+   organización cliente y para uso interno de esa organización.
+
+2. No se permite la redistribución, cesión a terceros, ingeniería inversa ni
+   descompilación del programa, salvo lo expresamente permitido por la ley.
+
+3. El programa funciona íntegramente en la red interna del cliente y no envía
+   información a servicios externos. La responsabilidad sobre el tratamiento
+   de los datos que se gestionen con el programa corresponde al cliente.
+
+4. Se concede una licencia de uso mientras estén vigentes los acuerdos
+   correspondientes con Studio Lexair. La desinstalación del programa
+   elimina sus componentes, pero no los datos almacenados en la carpeta de
+   datos del sistema (%LOCALAPPDATA%\VIGIA\datos), que pertenecen al cliente.
+
+Al pulsar «Acepto» usted declara estar autorizado para instalar este
+programa en nombre de su organización.

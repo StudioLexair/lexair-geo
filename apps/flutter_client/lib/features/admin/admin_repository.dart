@@ -66,6 +66,7 @@ class AdminRepository {
   Future<Json> updateOracleConnector(String id, Json body) => api.patchJson('/oracle/connectors/$id', body);
   Future<void> deleteOracleConnector(String id) => api.deleteJson('/oracle/connectors/$id');
   Future<Json> testOracleConnector(String id) => api.postJson('/oracle/connectors/$id/test', {});
+  Future<Json> testOracleConnection(Json body) => api.postJson('/oracle/test-connection', body);
   Future<Json> runOracleConnector(String id, {bool dryRun = false}) =>
       api.postJson('/oracle/connectors/$id/run', {'dryRun': dryRun});
   Future<List<Json>> oracleRuns({String? connectorId}) async =>

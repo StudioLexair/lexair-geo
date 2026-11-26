@@ -62,6 +62,8 @@ class Person {
     required this.dataSource,
     this.phone,
     this.notes,
+    this.cdr,
+    this.defenseZone,
     this.location,
     this.distanceM,
   });
@@ -78,6 +80,8 @@ class Person {
   final String dataSource;
   final String? phone;
   final String? notes;
+  final String? cdr;
+  final String? defenseZone;
   final PersonLocation? location;
   final num? distanceM;
 
@@ -96,6 +100,8 @@ class Person {
     dataSource: (j['dataSource'] as String?) ?? '',
     phone: j['phone'] as String?,
     notes: j['notes'] as String?,
+    cdr: j['cdr'] as String?,
+    defenseZone: j['defenseZone'] as String?,
     location: j['location'] == null
         ? null
         : PersonLocation.fromJson(j['location'] as Map<String, dynamic>),

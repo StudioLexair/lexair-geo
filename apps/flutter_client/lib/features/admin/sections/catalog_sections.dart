@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../admin_repository.dart';
+import '../../../core/config/terminologia.dart';
 import '../admin_widgets.dart';
 
 /// Diálogo genérico de alta/edición para catálogos pequeños.
@@ -232,8 +233,9 @@ class PassTypesSection extends StatelessWidget {
           ),
         ),
       const SizedBox(height: 12),
-      Text('El marcador de los presos en pase se configura en «Pases, zonas y personal» '
-          '(icono, color y tamaño).', style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+      Text('El marcador de ${T.sujetoPlural.toLowerCase()} con ${T.paseSingular.toLowerCase()} activo se configura en '
+          '«${T.pasePlural}, zonas y personal» (icono, color y tamaño).',
+          style: TextStyle(fontSize: 12, color: Colors.grey[700])),
     ]),
   );
 }

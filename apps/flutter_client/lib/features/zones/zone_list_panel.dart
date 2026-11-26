@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../map/map_view.dart';
 import '../map/workspace_controller.dart';
+import '../../core/config/terminologia.dart';
 
 /// Pestaña «Zonas» del panel izquierdo: lista de zonas visibles con recuentos
 /// y acceso directo al dibujo. La edición se hace tocando el área en el mapa.
@@ -48,8 +49,8 @@ class ZoneListPanel extends StatelessWidget {
             title: Text(z.name, style: const TextStyle(fontSize: 13)),
             subtitle: Text([
               z.category?.name ?? 'sin categoría',
-              '${z.membersCount} presos',
-              if (z.passesInside > 0) '${z.passesInside} pases activos',
+              '${z.membersCount} ${T.sujetoPlural.toLowerCase()}',
+              if (z.passesInside > 0) '${z.passesInside} ${T.pasePlural.toLowerCase()} activos',
               if (z.areaKm2 != null) '${z.areaKm2!.toStringAsFixed(1)} km²',
             ].join(' · '), style: const TextStyle(fontSize: 12)),
             onTap: () => ws.selectZone(z),

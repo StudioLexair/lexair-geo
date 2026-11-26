@@ -9,6 +9,7 @@ import '../auth/auth_controller.dart';
 import '../map/map_markers.dart' show fmtDateIso;
 import '../map/workspace_controller.dart';
 import '../persons/person.dart';
+import '../../core/config/terminologia.dart';
 import 'pass.dart';
 import 'pass_form_dialog.dart';
 
@@ -50,7 +51,7 @@ class _PassesSectionState extends State<PassesSection> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.isForbidden ? 'Sin permiso para consultar pases.' : e.userMessage;
+        _error = e.isForbidden ? 'Sin permiso para consultar ${T.pasePlural.toLowerCase()}.' : e.userMessage;
         _loading = false;
       });
     }
@@ -64,11 +65,11 @@ class _PassesSectionState extends State<PassesSection> {
     final messenger = ScaffoldMessenger.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Expanded(child: Text('Internos y pases', style: Theme.of(context).textTheme.titleSmall)),
+        Expanded(child: Text('${T.sujetoPlural} y ${T.pasePlural.toLowerCase()}', style: Theme.of(context).textTheme.titleSmall)),
         if (canWrite && _inmate == null)
           TextButton.icon(
             icon: const Icon(Icons.badge_outlined, size: 16),
-            label: const Text('Registrar como interno'),
+            label: Text('Registrar como ${T.sujetoSingular.toLowerCase()}'),
             onPressed: () async {
               final created = await showInmateFormDialog(context, person: widget.person);
               if (created) unawaited(_load());
@@ -87,7 +88,7 @@ class _PassesSectionState extends State<PassesSection> {
             padding: const EdgeInsets.only(bottom: 6),
             child: Wrap(spacing: 6, runSpacing: 4, children: [
               Chip(
-                label: Text('Interno ${_inmate!.internCode ?? '—'}',
+                label: Text('${T.sujetoSingular} ${_inmate!.internCode ?? '—'}',
                     style: const TextStyle(fontSize: 12)),
                 backgroundColor: LexairColors.sidebar.withValues(alpha: 0.08),
                 visualDensity: VisualDensity.compact,
@@ -152,13 +153,13 @@ class _PassesSectionState extends State<PassesSection> {
                 : null,
           ),
         if (_passes.isEmpty && _inmate != null)
-          const Text('Sin pases registrados.', style: TextStyle(fontSize: 13, color: LexairColors.muted)),
+          Text('Sin ${T.pasePlural.toLowerCase()} registrados.', style: const TextStyle(fontSize: 13, color: LexairColors.muted)),
         if (canWrite && _inmate != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: OutlinedButton.icon(
               icon: const Icon(Icons.assignment_turned_in_outlined, size: 18),
-              label: const Text('Conceder pase'),
+              label: Text('Conceder ${T.paseSingular.toLowerCase()}'),
               onPressed: () async {
                 final created = await showPassFormDialog(context, person: widget.person);
                 if (created) unawaited(_load());

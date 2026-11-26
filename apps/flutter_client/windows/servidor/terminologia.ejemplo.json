@@ -1,0 +1,12 @@
+{
+  "sujetoSingular": "Ficha",
+  "sujetoPlural": "Fichas",
+  "paseSingular": "Permiso",
+  "pasePlural": "Permisos",
+  "kardexTitulo": "Registros",
+  "kardexTituloCorto": "REGISTROS",
+  "importTitulo": "Importar fichas (Excel XML)",
+  "unidadLabel": "Unidad",
+  "orgNombre": "VIGÍA",
+  "_ayuda": "Copie este fichero como terminologia.json en %PROGRAMDATA%\\LexairGeo (o junto al ejecutable) y edite los valores que quiera cambiar. Cierre y abra VIGÍA para aplicar. Las claves no indicadas conservan su valor por defecto."
+}

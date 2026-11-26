@@ -24,6 +24,7 @@ function groupIdsFor(ctx: AppContext, codes: GroupCode[]): number[] {
 
 const FIELD_MAP: Record<string, string> = {
   givenNames: 'given_names', familyNames: 'family_names', phone: 'phone', notes: 'notes',
+  cdr: 'cdr', defenseZone: 'defense_zone',
   visibility: 'visibility', consentStatus: 'consent_status', dataSource: 'data_source',
   retentionUntil: 'retention_until',
 };

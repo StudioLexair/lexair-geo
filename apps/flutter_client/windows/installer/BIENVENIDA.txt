@@ -1,0 +1,29 @@
+Bienvenido al instalador de VIGÍA
+=================================
+
+Qué instala este asistente
+--------------------------
+· La aplicación VIGÍA para Windows (cliente).
+· Opcionalmente (tarea «Servidor integrado»), un servidor completo local:
+  base de datos geográfica y servicio de datos, listos para usar sin
+  conexión y sin configuración previa.
+
+Requisitos
+----------
+· Windows 10 o 11 (64 bits).
+· Aproximadamente 1,5 GB de espacio en disco si se instala el servidor
+  integrado (unos 300 MB si solo la aplicación).
+· Permisos de administrador para instalar.
+
+Después de instalar
+-------------------
+· Con el servidor integrado, la primera apertura crea la base de datos y
+  carga el catálogo del territorio; puede tardar 1–2 minutos. Las siguientes
+  aperturas son rápidas.
+· Cuenta inicial del modo integrado: yolexis / 123k20@A (cámbiela después
+  en Administración → Usuarios).
+· Si este equipo solo será cliente del servidor de la red, desmarque la
+  tarea «Servidor integrado» y elija la URL del servidor cuando se le pida.
+· Los textos de la interfaz (nombres de entidades y secciones) pueden
+  personalizarse editando terminologia.json — vea LEEME.txt del servidor
+  integrado o pida la plantilla a Studio Lexair.

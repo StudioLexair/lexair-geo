@@ -15,7 +15,11 @@ export 'local_runtime_stub.dart'
 Future<LocalRuntimePlan?> detectServidorIntegrado() => impl.detectServidorIntegrado();
 
 /// Levanta el servidor integrado completo (base de datos → extensiones →
-/// migraciones → catálogo → administrador → API) y devuelve la URL local.
-/// Es idempotente: si el API ya responde, no toca nada.
-Future<LocalRuntimePlan?> ensureServidorIntegrado({void Function(String)? onLog}) =>
-    impl.ensureServidorIntegrado(onLog: onLog);
+/// migraciones → catálogo → cuenta → API) y devuelve la URL local.
+/// Es idempotente: si ya responde, no toca nada. [onPaso] notifica
+/// ('bd'|'esquema'|'catalogo'|'cuenta'|'api', estado).
+Future<LocalRuntimePlan?> ensureServidorIntegrado({
+  void Function(String)? onLog,
+  void Function(String paso, String estado)? onPaso,
+}) =>
+    impl.ensureServidorIntegrado(onLog: onLog, onPaso: onPaso);

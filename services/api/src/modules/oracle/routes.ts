@@ -128,6 +128,42 @@ export async function oracleRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
+  /** Prueba ad-hoc de conexión con los campos del diálogo (no guarda nada). */
+  app.post('/oracle/test-connection', { preHandler: guard('oracle.sync') }, async (req) => {
+    const b = z.object({
+      host: z.string().trim().min(1).max(200),
+      port: z.coerce.number().int().min(1).max(65535),
+      serviceName: z.string().trim().min(1).max(100),
+      serviceKind: z.enum(['service', 'sid']).default('service'),
+      username: z.string().trim().min(1).max(100),
+      password: z.string().min(1).max(200),
+      thickMode: z.boolean().default(false),
+    }).parse(req.body ?? {});
+    const timeoutMs = await ctx.settings.number('oracle.timeout_ms', 30000);
+    const started = Date.now();
+    const opts = {
+      user: b.username,
+      password: b.password,
+      connectString: b.serviceKind === 'sid'
+        ? `${b.host}:${b.port}/:${b.serviceName}`
+        : `${b.host}:${b.port}/${b.serviceName}`,
+      thickMode: b.thickMode,
+    };
+    const result = await withOracle(opts, async (conn) => {
+      let banner: string | null = null;
+      try {
+        const r = await conn.execute('SELECT banner FROM v$version WHERE ROWNUM = 1', [], { outFormat: 4002 });
+        banner = String((rowsOf(r)[0] as Record<string, unknown> | undefined)?.['banner'] ?? '') || null;
+      } catch {
+        banner = null; // v$version puede requerir privilegios: no es fatal.
+      }
+      return { banner };
+    }, timeoutMs);
+    await writeAudit(ctx.db, req, { action: 'oracle_connection.test', entityType: 'oracle_connector',
+      entityId: null, success: true, details: { ms: Date.now() - started } });
+    return { ok: true, elapsedMs: Date.now() - started, ...result };
+  });
+
   /** Prueba de conexión: banner de la base y conteo por mapping (limitado). */
   app.post('/oracle/connectors/:id/test', { preHandler: guard('oracle.sync') }, async (req) => {
     const { id } = IdParams.parse(req.params);

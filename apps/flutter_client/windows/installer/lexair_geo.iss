@@ -33,7 +33,15 @@ MinVersion=10.0.17763
 PrivilegesRequired=admin
 WizardStyle=modern
 SetupIconFile=..\runner\resources\app_icon.ico
+WizardSmallImageFile=wizard_logo.png
+LicenseFile=LICENCIA.txt
+InfoBeforeFile=BIENVENIDA.txt
+UninstallDisplayName=VIGÍA (Lexair Geo)
 UninstallDisplayIcon={app}\lexair_geo.exe
+VersionInfoCompany=Studio Lexair
+VersionInfoProductName=VIGÍA
+VersionInfoProductVersion={#AppVersion}
+VersionInfoTextVersion={#AppVersion}
 SetupLogging=yes
 
 [Languages]
@@ -48,9 +56,9 @@ Name: "integrado"; Description: "Instalar servidor integrado (base de datos loca
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\datos_ejemplo\*"; DestDir: "{app}\datos_ejemplo"; Flags: ignoreversion
 #ifdef ServidorDir
 Source: "{#ServidorDir}\*"; DestDir: "{app}\servidor"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: integrado
-Source: "{#SourceDir}\datos_ejemplo\*"; DestDir: "{app}\datos_ejemplo"; Flags: ignoreversion; Tasks: integrado
 #endif
 
 [Dirs]
@@ -123,12 +131,22 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
-var Cfg, Url, CaDest: string;
+var Cfg, Url, CaDest, Term: string;
 begin
   if CurStep = ssPostInstall then begin
     CaDest := ExpandConstant('{commonappdata}\LexairGeo\lexair-geo-ca.crt');
     if HasCaFile then
       FileCopy(ParamValue('CAFILE'), CaDest, False);
+    // Plantilla de terminología (solo si no existe ninguna).
+    Term := ExpandConstant('{commonappdata}\LexairGeo\terminologia.ejemplo.json');
+    if not FileExists(Term) then
+      SaveStringToFile(Term,
+        '{' #13#10 '  "sujetoSingular": "Ficha",' #13#10 '  "sujetoPlural": "Fichas",' #13#10 +
+        '  "paseSingular": "Permiso",' #13#10 '  "pasePlural": "Permisos",' #13#10 +
+        '  "kardexTitulo": "Registros",' #13#10 '  "kardexTituloCorto": "REGISTROS",' #13#10 +
+        '  "importTitulo": "Importar fichas (Excel XML)",' #13#10 '  "unidadLabel": "Unidad",' #13#10 +
+        '  "orgNombre": "VIGÍA",' #13#10 +
+        '  "_ayuda": "Copie este fichero como terminologia.json y edite los valores; reinicie VIGÍA para aplicar."' #13#10 '}' #13#10, False);
     Cfg := ExpandConstant('{commonappdata}\LexairGeo\config.json');
     // No sobrescribe una configuración existente (actualizaciones).
     if not FileExists(Cfg) then begin

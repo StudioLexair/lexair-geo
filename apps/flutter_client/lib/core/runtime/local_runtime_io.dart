@@ -10,6 +10,8 @@ class LocalRuntimePlan {
     required this.nodeExe,
     required this.apiEntry,
     required this.sqlCatalogo,
+    required this.puertoApi,
+    required this.puertoBd,
   });
 
   final String baseDir;
@@ -17,17 +19,49 @@ class LocalRuntimePlan {
   final String nodeExe;
   final String apiEntry;
   final String sqlCatalogo;
+  final int puertoApi;
+  final int puertoBd;
 
-  String get serverUrl => 'http://127.0.0.1:3000';
+  String get serverUrl => 'http://127.0.0.1:$puertoApi';
 }
 
-const String _dbPort = '5433';
 const String _dbUser = 'lexair';
 const String _dbName = 'lexair_geo';
 const String _jwtSecret =
     'lexair-demo-secret-2026-minint-villa-clara-0123456789';
 const String _adminUser = 'yolexis';
 const String _adminPassword = '123k20@A';
+
+/// Configuración local opcional del servidor integrado
+/// (%LOCALAPPDATA%\VIGIA\servidor-local.json): { "puertoApi": 3000, "puertoBD": 5433 }.
+Future<(int, int)> _puertosConfigurados() async {
+  var api = 3000;
+  var bd = 5433;
+  try {
+    final local = Platform.environment['LOCALAPPDATA'];
+    if (local != null) {
+      final f = File('$local\\VIGIA\\servidor-local.json');
+      if (f.existsSync()) {
+        final dec = jsonDecode(f.readAsStringSync());
+        if (dec is Map<String, dynamic>) {
+          api = (dec['puertoApi'] as num?)?.toInt() ?? api;
+          bd = (dec['puertoBD'] as num?)?.toInt() ?? bd;
+        }
+      }
+    }
+  } catch (_) {}
+  return (api.clamp(1024, 65000), bd.clamp(1024, 65000));
+}
+
+Future<bool> _puertoLibre(int port) async {
+  try {
+    final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+    await s.close();
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Detecta el paquete del servidor integrado junto al ejecutable.
 Future<LocalRuntimePlan?> detectServidorIntegrado() async {
@@ -41,6 +75,8 @@ Future<LocalRuntimePlan?> detectServidorIntegrado() async {
     nodeExe: '$base\\node\\node.exe',
     apiEntry: '$base\\api\\dist\\index.js',
     sqlCatalogo: '$base\\sql\\cargar_catalogo.sql',
+    puertoApi: 3000,
+    puertoBd: 5433,
   );
   if (!File('$pgBin\\initdb.exe').existsSync()) return null;
   if (!File('$base\\node\\node.exe').existsSync()) return null;
@@ -48,133 +84,199 @@ Future<LocalRuntimePlan?> detectServidorIntegrado() async {
   return plan;
 }
 
-/// Arranca toda la pila integrada. Idempotente y con registro en `onLog`.
+/// Arranca toda la pila integrada. Idempotente y con registro.
+/// [onPaso] notifica ('bd'|'esquema'|'catalogo'|'cuenta'|'api', estado) con
+/// estado en {'iniciando','listo','omitido','error'}; [onLog] el detalle.
 Future<LocalRuntimePlan?> ensureServidorIntegrado({
   void Function(String)? onLog,
+  void Function(String paso, String estado)? onPaso,
 }) async {
-  final plan = await detectServidorIntegrado();
-  if (plan == null) return null;
+  final base = await detectServidorIntegrado();
+  if (base == null) return null;
   void log(String m) => onLog?.call(m);
-
-  // ¿El API ya responde? Nada que hacer.
-  if (await _apiOk(plan.serverUrl)) {
-    log('Servidor integrado ya activo en ${plan.serverUrl}');
-    return plan;
+  final completados = <String>{};
+  void paso(String k, String e) {
+    if (e == 'listo' || e == 'omitido') completados.add(k);
+    onPaso?.call(k, e);
   }
 
-  final local = Platform.environment['LOCALAPPDATA'] ??
-      '${plan.baseDir}\\datos';
+  // ¿Hay un servidor nuestro ya activo (por ejemplo arrancado antes)?
+  final cfg = await _puertosConfigurados();
+  if (await _apiOk('http://127.0.0.1:${cfg.$1}')) {
+    log('Servidor integrado ya activo en el puerto ${cfg.$1}');
+    return LocalRuntimePlan(
+      baseDir: base.baseDir, pgBin: base.pgBin, nodeExe: base.nodeExe,
+      apiEntry: base.apiEntry, sqlCatalogo: base.sqlCatalogo,
+      puertoApi: cfg.$1, puertoBd: cfg.$2,
+    );
+  }
+
+  // Elección de puertos: configurado → +25, saltando los ocupados.
+  log('Buscando puertos libres (API desde ${cfg.$1}, base desde ${cfg.$2})…');
+  var puertoApi = -1;
+  for (var p = cfg.$1; p <= cfg.$1 + 25; p++) {
+    if (await _puertoLibre(p)) {
+      puertoApi = p;
+      break;
+    }
+  }
+  if (puertoApi < 0) throw Exception('No hay puertos libres para el servidor');
+  var puertoBd = -1;
+  for (var p = cfg.$2; p <= cfg.$2 + 25; p++) {
+    if (await _puertoLibre(p)) {
+      puertoBd = p;
+      break;
+    }
+  }
+  if (puertoBd < 0) throw Exception('No hay puertos libres para la base de datos');
+  if (puertoApi != cfg.$1 || puertoBd != cfg.$2) {
+    log('Puerto configurado ocupado: se usará API $puertoApi y base $puertoBd');
+  }
+
+  final plan = LocalRuntimePlan(
+    baseDir: base.baseDir, pgBin: base.pgBin, nodeExe: base.nodeExe,
+    apiEntry: base.apiEntry, sqlCatalogo: base.sqlCatalogo,
+    puertoApi: puertoApi, puertoBd: puertoBd,
+  );
+
+  final local = Platform.environment['LOCALAPPDATA'] ?? '${plan.baseDir}\\datos';
   final dataDir = '$local\\VIGIA\\datos';
   final logDir = '$local\\VIGIA\\logs';
   Directory(dataDir).createSync(recursive: true);
   Directory(logDir).createSync(recursive: true);
-  final dbUrl = 'postgres://$_dbUser@127.0.0.1:$_dbPort/$_dbName';
+  final dbUrl = 'postgres://$_dbUser@127.0.0.1:$puertoBd/$_dbName';
   final env = {
     ...Platform.environment,
-    'PGPORT': _dbPort,
+    'PGPORT': '$puertoBd',
     'PGHOST': '127.0.0.1',
     'PGUSER': _dbUser,
     'PGDATABASE': _dbName,
     'PGCLIENTENCODING': 'UTF8',
   };
 
-  // 1 · Inicializar el clúster la primera vez.
-  if (!File('$dataDir\\PG_VERSION').existsSync()) {
-    log('Inicializando base de datos local (solo la primera vez)…');
-    final r = _run(
-      '${plan.pgBin}\\initdb.exe',
-      ['-D', dataDir, '-U', _dbUser, '-A', 'trust', '-E', 'UTF8', '--locale=C'],
-    );
-    if (r.exitCode != 0) {
-      throw Exception('initdb falló: ${_tail(r)}');
+  try {
+    // 1 · Inicializar el clúster la primera vez.
+    paso('bd', 'iniciando');
+    if (!File('$dataDir\\PG_VERSION').existsSync()) {
+      log('Inicializando base de datos local (solo la primera vez)…');
+      final r = _run('${plan.pgBin}\\initdb.exe',
+          ['-D', dataDir, '-U', _dbUser, '-A', 'trust', '-E', 'UTF8', '--locale=C']);
+      if (r.exitCode != 0) throw Exception('initdb falló: ${_tail(r)}');
     }
-  }
 
-  // 2 · Levantar PostgreSQL en el puerto 5433.
-  log('Iniciando PostgreSQL local…');
-  await Process.start(
-    '${plan.pgBin}\\pg_ctl.exe',
-    ['-D', dataDir, '-o', '-p $_dbPort', '-l', '$logDir\\postgresql.log', '-w', 'start'],
-    environment: env,
-    mode: ProcessStartMode.detached,
-  );
-  if (!await _esperarPuerto(int.parse(_dbPort), const Duration(seconds: 60))) {
-    throw Exception('PostgreSQL no abrió el puerto $_dbPort (ver $logDir)');
-  }
+    // 2 · Levantar PostgreSQL.
+    log('Iniciando base de datos local (puerto $puertoBd)…');
+    await Process.start(
+      '${plan.pgBin}\\pg_ctl.exe',
+      ['-D', dataDir, '-o', '-p $puertoBd', '-l', '$logDir\\postgresql.log', '-w', 'start'],
+      environment: env,
+      mode: ProcessStartMode.detached,
+    );
+    if (!await _esperarPuerto(puertoBd, const Duration(seconds: 60))) {
+      throw Exception('La base de datos no abrió el puerto $puertoBd (ver $logDir)');
+    }
 
-  // 3 · Base de datos + extensiones.
-  final hayDb = _run('${plan.pgBin}\\psql.exe',
-          ['-h', '127.0.0.1', '-p', _dbPort, '-U', _dbUser, '-d', 'postgres', '-tAc',
-           "SELECT 1 FROM pg_database WHERE datname='$_dbName'"])
-      .stdout
-      .trim();
-  if (hayDb != '1') {
-    log('Creando base de datos $_dbName…');
-    final r = _run('${plan.pgBin}\\createdb.exe',
-        ['-h', '127.0.0.1', '-p', _dbPort, '-U', _dbUser, _dbName]);
-    if (r.exitCode != 0) throw Exception('createdb falló: ${_tail(r)}');
-  }
-  final ext = _run('${plan.pgBin}\\psql.exe',
-      ['-h', '127.0.0.1', '-p', _dbPort, '-U', _dbUser, '-d', _dbName, '-tAc',
-       "SELECT count(*) FROM pg_extension WHERE extname IN ('postgis','pg_trgm','unaccent')"]);
-  final extOut = ext.stdout.toString().trim();
-  if (int.tryParse(extOut) == null || int.parse(extOut) < 3) {
-    log('Instalando extensiones (PostGIS…)');
-    final r = _run('${plan.pgBin}\\psql.exe',
-        ['-h', '127.0.0.1', '-p', _dbPort, '-U', _dbUser, '-d', _dbName, '-c',
-         'CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS unaccent;']);
-    if (r.exitCode != 0) throw Exception('Extensiones fallaron: ${_tail(r)}');
-  }
+    // 3 · Base de datos + extensiones.
+    final hayDb = _run('${plan.pgBin}\\psql.exe',
+            ['-h', '127.0.0.1', '-p', '$puertoBd', '-U', _dbUser, '-d', 'postgres', '-tAc',
+             "SELECT 1 FROM pg_database WHERE datname='$_dbName'"])
+        .stdout
+        .toString()
+        .trim();
+    if (hayDb != '1') {
+      log('Creando base de datos…');
+      final r = _run('${plan.pgBin}\\createdb.exe',
+          ['-h', '127.0.0.1', '-p', '$puertoBd', '-U', _dbUser, _dbName]);
+      if (r.exitCode != 0) throw Exception('createdb falló: ${_tail(r)}');
+    }
+    final extOut = _run('${plan.pgBin}\\psql.exe',
+            ['-h', '127.0.0.1', '-p', '$puertoBd', '-U', _dbUser, '-d', _dbName, '-tAc',
+             "SELECT count(*) FROM pg_extension WHERE extname IN ('postgis','pg_trgm','unaccent')"])
+        .stdout
+        .toString()
+        .trim();
+    if (int.tryParse(extOut) == null || int.parse(extOut) < 3) {
+      log('Instalando extensiones geográficas…');
+      final r = _run('${plan.pgBin}\\psql.exe',
+          ['-h', '127.0.0.1', '-p', '$puertoBd', '-U', _dbUser, '-d', _dbName, '-c',
+           'CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS unaccent;']);
+      if (r.exitCode != 0) throw Exception('Extensiones fallaron: ${_tail(r)}');
+    }
+    paso('bd', 'listo');
 
-  // 4 · Migraciones.
-  log('Aplicando esquema y migraciones…');
-  final mig = _run(plan.nodeExe, ['api/dist/cli/migrate.js'],
-      workingDirectory: plan.baseDir,
-      env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret, 'NODE_ENV': 'production'});
-  if (mig.exitCode != 0) throw Exception('Migraciones fallaron: ${_tail(mig)}');
-
-  // 5 · Catálogo geográfico de Villa Clara (si está vacío).
-  final munis = _run('${plan.pgBin}\\psql.exe',
-      ['-h', '127.0.0.1', '-p', _dbPort, '-U', _dbUser, '-d', _dbName, '-tAc',
-       'SELECT count(*) FROM geo.municipalities']);
-  if (munis.stdout.trim() == '0') {
-    log('Cargando catálogo de Villa Clara (13 municipios, calles y alias)…');
-    final r = _run('${plan.pgBin}\\psql.exe',
-        ['-h', '127.0.0.1', '-p', _dbPort, '-U', _dbUser, '-d', _dbName, '-f', plan.sqlCatalogo]);
-    if (r.exitCode != 0) throw Exception('Catálogo falló: ${_tail(r)}');
-  } else {
-    log('Catálogo geográfico ya cargado.');
-  }
-
-  // 6 · Administrador inicial (solo si no hay usuarios).
-  final users = _run('${plan.pgBin}\\psql.exe',
-      ['-h', '127.0.0.1', '-p', _dbPort, '-U', _dbUser, '-d', _dbName, '-tAc',
-       'SELECT count(*) FROM identity.users']);
-  if (users.stdout.trim() == '0') {
-    log('Creando administrador inicial ($_adminUser)…');
-    final r = _run(plan.nodeExe,
-        ['api/dist/cli/create-admin.js', '--username', _adminUser, '--allow-weak'],
+    // 4 · Migraciones.
+    paso('esquema', 'iniciando');
+    log('Aplicando esquema y migraciones…');
+    final mig = _run(plan.nodeExe, ['api/dist/cli/migrate.js'],
         workingDirectory: plan.baseDir,
-        env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
-              'LEXAIR_ADMIN_PASSWORD': _adminPassword, 'NODE_ENV': 'production'});
-    if (r.exitCode != 0) throw Exception('create-admin falló: ${_tail(r)}');
-  }
+        env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret, 'NODE_ENV': 'production'});
+    if (mig.exitCode != 0) throw Exception('Migraciones fallaron: ${_tail(mig)}');
+    paso('esquema', 'listo');
 
-  // 7 · API en el puerto 3000.
-  log('Iniciando servidor VIGÍA (API)…');
-  await Process.start(
-    plan.nodeExe,
-    ['api/dist/index.js'],
-    workingDirectory: plan.baseDir,
-    environment: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
-        'NODE_ENV': 'production', 'PORT': '3000'},
-    mode: ProcessStartMode.detached,
-  );
-  if (!await _esperarApi(plan.serverUrl, const Duration(seconds: 90))) {
-    throw Exception('El API no respondió en ${plan.serverUrl}');
+    // 5 · Catálogo del territorio (si está vacío).
+    paso('catalogo', 'iniciando');
+    final munis = _run('${plan.pgBin}\\psql.exe',
+            ['-h', '127.0.0.1', '-p', '$puertoBd', '-U', _dbUser, '-d', _dbName, '-tAc',
+             'SELECT count(*) FROM geo.municipalities'])
+        .stdout
+        .toString()
+        .trim();
+    if (munis == '0') {
+      log('Cargando catálogo del territorio (13 municipios, calles y alias)…');
+      final r = _run('${plan.pgBin}\\psql.exe',
+          ['-h', '127.0.0.1', '-p', '$puertoBd', '-U', _dbUser, '-d', _dbName, '-f', plan.sqlCatalogo]);
+      if (r.exitCode != 0) throw Exception('Catálogo falló: ${_tail(r)}');
+    } else {
+      paso('catalogo', 'omitido');
+      log('Catálogo del territorio ya cargado.');
+    }
+    if (munis == '0') paso('catalogo', 'listo');
+
+    // 6 · Cuenta inicial (solo si no hay usuarios).
+    paso('cuenta', 'iniciando');
+    final users = _run('${plan.pgBin}\\psql.exe',
+            ['-h', '127.0.0.1', '-p', '$puertoBd', '-U', _dbUser, '-d', _dbName, '-tAc',
+             'SELECT count(*) FROM identity.users'])
+        .stdout
+        .toString()
+        .trim();
+    if (users == '0') {
+      log('Creando cuenta inicial ($_adminUser)…');
+      final r = _run(plan.nodeExe,
+          ['api/dist/cli/create-admin.js', '--username', _adminUser, '--allow-weak'],
+          workingDirectory: plan.baseDir,
+          env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
+                'LEXAIR_ADMIN_PASSWORD': _adminPassword, 'NODE_ENV': 'production'});
+      if (r.exitCode != 0) throw Exception('create-admin falló: ${_tail(r)}');
+    } else {
+      paso('cuenta', 'omitido');
+    }
+    if (users == '0') paso('cuenta', 'listo');
+
+    // 7 · API.
+    paso('api', 'iniciando');
+    log('Iniciando servidor local (puerto $puertoApi)…');
+    await Process.start(
+      plan.nodeExe,
+      ['api/dist/index.js'],
+      workingDirectory: plan.baseDir,
+      environment: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
+          'NODE_ENV': 'production', 'PORT': '$puertoApi'},
+      mode: ProcessStartMode.detached,
+    );
+    if (!await _esperarApi(plan.serverUrl, const Duration(seconds: 90))) {
+      throw Exception('El servidor no respondió en ${plan.serverUrl}');
+    }
+    paso('api', 'listo');
+    log('Servidor integrado listo en ${plan.serverUrl}');
+    return plan;
+  } catch (e) {
+    for (final k in const ['bd', 'esquema', 'catalogo', 'cuenta', 'api']) {
+      // Solo los pasos que no llegaron a terminar quedan en error.
+      if (!completados.contains(k)) onPaso?.call(k, 'error');
+    }
+    rethrow;
   }
-  log('Servidor integrado listo en ${plan.serverUrl}');
-  return plan;
 }
 
 ProcessResult _run(String exe, List<String> args,

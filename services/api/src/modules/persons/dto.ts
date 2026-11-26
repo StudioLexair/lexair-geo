@@ -7,6 +7,8 @@ export type PersonRow = {
   family_names: string;
   phone: string | null;
   notes: string | null;
+  cdr: string | null;
+  defense_zone: string | null;
   is_active: boolean;
   is_synthetic: boolean;
   visibility: string;
@@ -34,7 +36,7 @@ export type PersonRow = {
 
 /** Columnas comunes; $1 debe ser el array de grupos permitidos (smallint[]). */
 export const PERSON_SELECT = `
-  SELECT p.id, p.code, p.given_names, p.family_names, p.phone, p.notes, p.is_active,
+  SELECT p.id, p.code, p.given_names, p.family_names, p.phone, p.notes, p.cdr, p.defense_zone, p.is_active,
          p.is_synthetic, p.visibility, p.consent_status, p.data_source, p.retention_until::text,
          p.created_at, p.updated_at,
          ARRAY(SELECT g.code FROM directory.person_memberships m
@@ -84,6 +86,8 @@ export function toPersonDto(r: PersonRow, user: AuthUser) {
     fullName: `${r.given_names} ${r.family_names}`,
     phone: exact ? r.phone : null,
     notes: exact ? r.notes : null,
+    cdr: exact ? r.cdr : null,
+    defenseZone: exact ? r.defense_zone : null,
     isActive: r.is_active,
     isSynthetic: r.is_synthetic,
     visibility: r.visibility,

@@ -7,6 +7,7 @@ import '../../core/util/icon_map.dart';
 import '../../core/util/labels.dart';
 import '../persons/person.dart';
 import 'workspace_controller.dart';
+import '../../core/config/terminologia.dart';
 
 /// Marcadores de personas: agrupaciones (calculadas en el servidor con
 /// PostGIS) a zoom bajo y puntos individuales a zoom alto.
@@ -128,9 +129,9 @@ List<Marker> buildPassMarkers(BuildContext context, WorkspaceController ws) {
         alignment: Alignment.topCenter,
         child: Tooltip(
           message: '${m.pass.personName ?? ''}\n'
-              'Pase: ${m.pass.passTypeName ?? ''}\n'
+              '${T.paseSingular}: ${m.pass.passTypeName ?? ''}\n'
               'Hasta: ${fmtDateIso(m.pass.endsAt)}\n'
-              'Interno: ${m.pass.internCode ?? '—'}',
+              '${T.sujetoSingular}: ${m.pass.internCode ?? '—'}',
           child: GestureDetector(
             onTap: () => ws.selectById(m.pass.personId),
             child: Stack(clipBehavior: Clip.none, children: [

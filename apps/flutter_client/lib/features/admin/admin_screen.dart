@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../auth/auth_controller.dart';
 import '../auth/user_profile.dart';
+import '../../core/config/terminologia.dart';
 import 'admin_repository.dart';
 import 'sections/audit_section.dart';
 import 'sections/catalog_sections.dart';
@@ -47,10 +48,10 @@ final List<AdminSectionDef> adminSections = [
   AdminSectionDef('settings', 'Configuración general', Icons.settings_outlined, 'settings.manage',
       (r) => SettingsSection(repo: r, title: 'Configuración general', exclude: const ['proximity.', 'map.'])),
   AdminSectionDef('zonecategories', 'Categorías de zona', Icons.category_outlined, 'zones.write', (r) => ZoneCategoriesSection(repo: r)),
-  AdminSectionDef('passtypes', 'Tipos de pase', Icons.sticky_note_2_outlined, 'passes.write', (r) => PassTypesSection(repo: r)),
+  AdminSectionDef('passtypes', 'Tipos de ${T.paseSingular.toLowerCase()}', Icons.sticky_note_2_outlined, 'passes.write', (r) => PassTypesSection(repo: r)),
   AdminSectionDef('connections', 'Conexiones de datos', Icons.lan_outlined, 'system.status', (r) => DataConnectionsSection(repo: r)),
-  AdminSectionDef('opsettings', 'Pases, zonas y personal', Icons.tune_outlined, 'settings.manage',
-      (r) => SettingsSection(repo: r, title: 'Pases, zonas y personal',
+  AdminSectionDef('opsettings', '${T.pasePlural}, zonas y personal', Icons.tune_outlined, 'settings.manage',
+      (r) => SettingsSection(repo: r, title: '${T.pasePlural}, zonas y personal',
           prefixes: const ['passes.', 'zones.', 'personnel.', 'inmate.'])),
   AdminSectionDef('personnel', 'Personal de la fuerza', Icons.shield_outlined, 'personnel.write', (r) => PersonnelSection(repo: r)),
   AdminSectionDef('oracle', 'Oracle 11g', Icons.storage_outlined, 'settings.manage', (r) => OracleSection(repo: r)),

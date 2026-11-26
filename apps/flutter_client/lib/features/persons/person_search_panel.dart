@@ -7,6 +7,7 @@ import '../../core/net/api_exception.dart';
 import '../../core/util/labels.dart';
 import '../auth/auth_controller.dart';
 import '../map/workspace_controller.dart';
+import '../../core/config/terminologia.dart';
 import 'person.dart';
 import 'person_detail_panel.dart';
 import 'person_form_dialog.dart';
@@ -110,11 +111,11 @@ class _PersonSearchPanelState extends State<PersonSearchPanel> {
             DropdownButton<String>(
               value: _onPass,
               underline: const SizedBox.shrink(),
-              hint: const Text('Pase'),
-              items: const [
-                DropdownMenuItem(value: null, child: Text('Todos')),
-                DropdownMenuItem(value: 'true', child: Text('En pase')),
-                DropdownMenuItem(value: 'false', child: Text('Sin pase')),
+              hint: Text(T.paseSingular),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Todos')),
+                DropdownMenuItem(value: 'true', child: Text('En ${T.paseSingular.toLowerCase()}')),
+                DropdownMenuItem(value: 'false', child: Text('Sin ${T.paseSingular.toLowerCase()}')),
               ],
               onChanged: (v) {
                 setState(() => _onPass = v);
