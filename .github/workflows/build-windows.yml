@@ -72,8 +72,8 @@ jobs:
           # Prueba real: clúster temporal + CREATE EXTENSION postgis
           $test = Join-Path $tmp 'cluster'
           & "$pg\bin\initdb.exe" -D $test -U lexair -A trust -E UTF8 --locale=C | Out-Null
-          $start = Start-Process "$pg\bin\pg_ctl.exe" -ArgumentList "-D ""$test"" -o '-p 5599' -l ""$tmp\pg.log"" -w start" -PassThru -Wait -NoNewWindow
-          if ($start.ExitCode -ne 0) { throw 'pg_ctl start falló' }
+          & "$pg\bin\pg_ctl.exe" -D $test -o "-p 5599" -l "$tmp\pg.log" -w start
+          if ($LASTEXITCODE -ne 0) { throw 'pg_ctl start falló' }
           & "$pg\bin\createdb.exe" -h 127.0.0.1 -p 5599 -U lexair postgis_test | Out-Null
           $ver = (& "$pg\bin\psql.exe" -h 127.0.0.1 -p 5599 -U lexair -d postgis_test -tAc "CREATE EXTENSION postgis; SELECT postgis_full_version();") -join ' '
           & "$pg\bin\pg_ctl.exe" -D $test -w -m fast stop | Out-Null
