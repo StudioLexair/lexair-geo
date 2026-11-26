@@ -32,6 +32,9 @@ class AdminRepository {
 
   Future<List<Json>> imports() async => itemsOf(await api.getJson('/imports'));
   Future<Json> importDetail(String id) => api.getJson('/imports/$id');
+  Future<Json> importReclusosXml(String xml, {required String group, required bool dryRun, required String filename}) =>
+      api.postText('/imports/reclusos-xml?group=$group&dryRun=$dryRun&filename=$filename', xml,
+          'application/xml', {});
   Future<Json> importCsv(String csv, {required String group, required bool dryRun, required String filename}) =>
       api.postText('/imports/persons', csv, 'text/csv; charset=utf-8',
           {'group': group, 'dryRun': '$dryRun', 'filename': filename});
