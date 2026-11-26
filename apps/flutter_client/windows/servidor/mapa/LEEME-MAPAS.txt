@@ -1,0 +1,20 @@
+VIGÍA · Cartografía offline
+===========================
+
+El mapa de VIGÍA usa paquetes cartográficos locales (MBTiles) generados por
+el workflow «build-map» del repositorio (extracto semanal de OpenStreetMap de
+Cuba con estilos estándar, oscuro y alto contraste, más el catálogo geográfico).
+
+Para instalarlos en este servidor integrado:
+
+1. Descargue el artefacto «paquete-cartografico-...» del workflow build-map
+   (o el fichero mapa_vc_*.zip que le hayan entregado).
+2. Copie dentro de esta carpeta (servidor\mapa\):
+       mapa_vc.mbtiles          (mosaicos por estilo: estandar/oscuro/...)
+       catalog.json             (metadatos y sumas)
+3. Reinicie VIGÍA. Los modos de mapa del panel superior aparecerán según
+   los estilos del paquete instalado.
+
+Mientras no haya paquete, el mapa queda vacío pero el resto del sistema
+(kardex, búsqueda de direcciones, zonas, importaciones) funciona: el catálogo
+de municipios, calles y alias ya está cargado en la base local.

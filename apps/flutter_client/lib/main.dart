@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 
-import 'app.dart';
-import 'core/app_services.dart';
 import 'core/config/config_store.dart';
-import 'core/net/api_client.dart';
-import 'core/net/http_client_factory.dart';
+import 'core/runtime/local_runtime.dart';
+import 'features/bootstrap/bootstrap_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final store = ConfigStore();
   final config = await store.load();
-  final api = ApiClient(
-    baseUrl: config.apiBase,
-    client: createHttpClient(caCertificatePath: config.caCertificatePath),
-  );
-  runApp(LexairApp(services: AppServices(config: config, api: api, configStore: store)));
+  // «Todo en uno»: si el paquete incluye un servidor integrado y el usuario
+  // aún no apunta a un servidor interno propio, se muestra la pantalla de
+  // arranque que levanta la base de datos y el API antes del acceso.
+  final plan = await detectServidorIntegrado();
+  runApp(VigiaRoot(initialConfig: config, store: store, plan: plan));
 }

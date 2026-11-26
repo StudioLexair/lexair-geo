@@ -8,6 +8,10 @@ al mapa para fijar residencias exactas y carga de datos desde Oracle 11g.
 
 - Servidor único Ubuntu Server LTS de 8 GB en red local, sin Internet.
 - 10–30 puestos cliente: aplicación **Windows** (instalador offline o ZIP portable)
+- **Modo «todo en uno»**: el paquete Windows incluye servidor integrado (PostgreSQL 17 + PostGIS +
+  Node + API con el catálogo de Villa Clara precargado) que se levanta solo al abrir VIGÍA —
+  ideal para pruebas y máquina de guardia; para la red del unidad, desmarque la tarea
+  «Servidor integrado» en el instalador y apunte los clientes al servidor central.
   y **navegador** (Flutter Web), ambos contra la misma API y base de datos.
 - Hasta **500 000 personas** en dos grupos (A: directorio importado, B: registros
   propios), sin duplicar identidades.

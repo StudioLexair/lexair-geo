@@ -1,9 +1,11 @@
-# LEXAIR GEO · Cliente Windows: ZIP portable completo (exe + DLL + data) e instalador offline.
+# VIGÍA · Cliente Windows «todo en uno»: la app trae servidor integrado
+# (PostgreSQL 17 + PostGIS + Node.js + API) y levanta todo al arrancar.
+# Produce ZIP portable completo e instalador offline con tarea opcional.
 name: build-windows
 on:
   push:
     branches: [main]
-    paths: ['apps/flutter_client/**', '.github/workflows/build-windows.yml']
+    paths: ['apps/flutter_client/**', 'services/api/**', 'datos/**', '.github/workflows/build-windows.yml']
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -30,22 +32,102 @@ jobs:
           cache: true
       - run: flutter pub get --enforce-lockfile
       - run: flutter build windows --release
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.1
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+
+      - name: Compilar API (dist + dependencias de producción)
+        working-directory: services/api
+        run: |
+          npm ci
+          npm run build
+          npm prune --omit=dev
+
+      - name: Descargar PostgreSQL 17 + PostGIS y verificarlos en vivo
+        working-directory: ${{ github.workspace }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tmp = Join-Path $env:RUNNER_TEMP 'vigia-pg'
+          New-Item -ItemType Directory -Force $tmp | Out-Null
+
+          # PostgreSQL oficial (binarios zip de EnterpriseDB)
+          $pgZip = Join-Path $tmp 'pg-binaries.zip'
+          Invoke-WebRequest 'https://get.enterprisedb.com/postgresql/postgresql-17.5-1-windows-x64-binaries.zip' -OutFile $pgZip
+          Expand-Archive $pgZip (Join-Path $tmp 'root')
+          $pg = Join-Path $tmp 'root\pgsql'
+          if (-not (Test-Path "$pg\bin\initdb.exe")) { throw 'initdb no está en los binarios' }
+
+          # PostGIS oficial (paquete zip de OSGeo para pg17)
+          $gisZip = Join-Path $tmp 'postgis.zip'
+          Invoke-WebRequest 'https://download.osgeo.org/postgis/windows/pg17/postgis-bundle-pg17-3.7.0x64.zip' -OutFile $gisZip
+          Expand-Archive $gisZip (Join-Path $tmp 'postgis')
+          $ctrl = Get-ChildItem (Join-Path $tmp 'postgis') -Recurse -Filter postgis.control | Select-Object -First 1
+          if (-not $ctrl) { throw 'postgis.control no encontrado en el paquete' }
+          $payload = $ctrl.Directory.Parent.FullName   # ...\share\extension → raíz del payload
+          Copy-Item "$payload\*" $pg -Recurse -Force
+
+          # Prueba real: clúster temporal + CREATE EXTENSION postgis
+          $test = Join-Path $tmp 'cluster'
+          & "$pg\bin\initdb.exe" -D $test -U lexair -A trust -E UTF8 --locale=C | Out-Null
+          $start = Start-Process "$pg\bin\pg_ctl.exe" -ArgumentList "-D ""$test"" -o '-p 5599' -l ""$tmp\pg.log"" -w start" -PassThru -Wait -NoNewWindow
+          if ($start.ExitCode -ne 0) { throw 'pg_ctl start falló' }
+          & "$pg\bin\createdb.exe" -h 127.0.0.1 -p 5599 -U lexair postgis_test | Out-Null
+          $ver = (& "$pg\bin\psql.exe" -h 127.0.0.1 -p 5599 -U lexair -d postgis_test -tAc "CREATE EXTENSION postgis; SELECT postgis_full_version();") -join ' '
+          & "$pg\bin\pg_ctl.exe" -D $test -w -m fast stop | Out-Null
+          if ($ver -notmatch 'POSTGIS-3') { throw "PostGIS no funciona en el paquete: $ver" }
+          Write-Host "PostgreSQL+PostGIS verificados: $ver"
+          "$pg" | Out-File -Encoding ascii $env:RUNNER_TEMP\pg-dir.txt
+
+      - name: Montar paquete del servidor integrado
+        working-directory: ${{ github.workspace }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $rel = 'apps\flutter_client\build\windows\x64\runner\Release'
+          $pg  = (Get-Content $env:RUNNER_TEMP\pg-dir.txt -Raw).Trim()
+          $srv = Join-Path $rel 'servidor'
+          New-Item -ItemType Directory -Force "$srv\node","$srv\api","$srv\sql","$srv\mapa","$rel\datos_ejemplo" | Out-Null
+
+          # PostgreSQL + PostGIS verificados
+          Copy-Item $pg "$srv\pg" -Recurse
+          # Node.js oficial verificado por SHA-256
+          $nodeZip = Join-Path $env:RUNNER_TEMP 'node.zip'
+          Invoke-WebRequest 'https://nodejs.org/dist/v26.13.1/node-v26.13.1-win-x64.zip' -OutFile $nodeZip
+          $shas = (Invoke-WebRequest 'https://nodejs.org/dist/v26.13.1/SHASUMS256.txt').Content
+          if ($shas -notmatch '([0-9a-f]{64})\s+node-v26\.13\.1-win-x64\.zip') { throw 'SHA de node no encontrado' }
+          if ((Get-FileHash $nodeZip -Algorithm SHA256).Hash.ToLower() -ne $Matches[1]) { throw 'SHA-256 de node.zip no coincide' }
+          Expand-Archive $nodeZip (Join-Path $env:RUNNER_TEMP 'nodedist')
+          Copy-Item (Join-Path $env:RUNNER_TEMP 'nodedist\node-v26.13.1-win-x64\node.exe') "$srv\node\node.exe"
+          # API compilado + catálogo + documentación + datos de ejemplo
+          Copy-Item 'services\api\dist' "$srv\api\dist" -Recurse
+          Copy-Item 'services\api\node_modules' "$srv\api\node_modules" -Recurse
+          Copy-Item 'services\api\package.json','services\api\package-lock.json' "$srv\api\"
+          Copy-Item 'datos\catalogo_vc\cargar_catalogo.sql' "$srv\sql\cargar_catalogo.sql"
+          Copy-Item 'apps\flutter_client\windows\servidor\LEEME.txt' "$srv\LEEME.txt"
+          Copy-Item 'apps\flutter_client\windows\servidor\mapa\LEEME-MAPAS.txt' "$srv\mapa\LEEME-MAPAS.txt"
+          Copy-Item 'datos\ejemplo\*' "$rel\datos_ejemplo\"
+          $sz = [math]::Round((Get-ChildItem $srv -Recurse | Measure-Object Length -Sum).Sum / 1MB)
+          Write-Host "servidor/ montado: $sz MB"
+
       - name: Empaquetar ZIP portable
         run: |
           $ver = '${{ inputs.version }}'; if (-not $ver) { $ver = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([^+\s]+)').Matches[0].Groups[1].Value }
           $rel = 'build\windows\x64\runner\Release'
-          foreach ($f in 'lexair_geo.exe','flutter_windows.dll','data\icudtl.dat','data\app.so') {
-            if (-not (Test-Path (Join-Path $rel $f))) { throw "Falta $f en la compilación" } }
+          foreach ($f in 'lexair_geo.exe','flutter_windows.dll','data\icudtl.dat','data\app.so','servidor\node\node.exe','servidor\pg\bin\postgres.exe','servidor\api\dist\index.js') {
+            if (-not (Test-Path (Join-Path $rel $f))) { throw "Falta $f en el paquete" } }
           Copy-Item ..\..\infrastructure\windows\config.example.json (Join-Path $rel 'config.example.json')
-          Copy-Item ..\..\docs\WINDOWS_BUILD.md (Join-Path $rel 'LEEME.md') -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force ..\..\out | Out-Null
           Compress-Archive -Path "$rel\*" -DestinationPath "..\..\out\Vigia-$ver-windows-x64-portable.zip" -Force
           "VERSION=$ver" | Out-File -Append $env:GITHUB_ENV
+
       - name: Instalador offline (Inno Setup)
         run: |
           $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue
           if (-not $iscc) { choco install innosetup --version=6.7.1 -y --no-progress; $env:Path += ';C:\Program Files (x86)\Inno Setup 6' }
-          iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$PWD\build\windows\x64\runner\Release" "/DOutDir=$PWD\..\..\out" windows\installer\lexair_geo.iss
+          iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$PWD\build\windows\x64\runner\Release" "/DServidorDir=$PWD\build\windows\x64\runner\Release\servidor" "/DOutDir=$PWD\..\..\out" windows\installer\lexair_geo.iss
+
       - name: Sumas SHA-256
         working-directory: out
         run: Get-ChildItem *.zip,*.exe | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name } | Out-File -Encoding ascii SHA256SUMS-windows.txt
