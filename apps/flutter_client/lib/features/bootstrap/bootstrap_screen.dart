@@ -9,6 +9,8 @@ import '../../core/runtime/local_runtime.dart';
 import '../../core/theme/app_theme.dart';
 import '../../app.dart';
 import '../../core/app_services.dart';
+import 'asistente_screen.dart';
+import '../shell/barra_titulo.dart' as barra;
 
 /// Pantalla de arranque del «todo en uno»: levanta el servidor integrado
 /// (base de datos + API) antes de mostrar la pantalla de acceso. Solo aparece
@@ -241,7 +243,9 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
   }
 }
 
-/// Raíz que decide entre la pantalla de arranque integrado y la app normal.
+/// Raíz: decide entre el asistente de primera configuración, la pantalla de
+/// arranque del servidor integrado y la aplicación normal. Añade la barra de
+/// título propia cuando la ventana no la trae del sistema.
 class VigiaRoot extends StatefulWidget {
   const VigiaRoot({
     super.key,
@@ -262,20 +266,38 @@ class _VigiaRootState extends State<VigiaRoot> {
   late AppConfig _config;
   late AppServices _services;
   bool _bootstrap = false;
+  bool _asistente = false;
 
   bool _esLocalOFabrica(String url) =>
       url == 'https://geo.internal' ||
       url.startsWith('http://127.0.0.1') ||
       url.startsWith('http://localhost');
 
+  String _badge() {
+    if (widget.plan == null) return 'Red interna';
+    return _esLocalOFabrica(_config.serverUrl) ? 'Prueba local' : 'Red interna';
+  }
+
   @override
   void initState() {
     super.initState();
     _config = widget.initialConfig;
     _services = _buildServices();
-    // Arranque integrado solo si el servidor configurado es el de fábrica o
-    // un servidor local (nuestro puerto puede haber cambiado tras un reinicio).
-    _bootstrap = widget.plan != null && _esLocalOFabrica(_config.serverUrl);
+    if (widget.plan != null && _esLocalOFabrica(_config.serverUrl)) {
+      // Primera configuración: si el asistente no se ha completado aún, es lo
+      // primero que se ve; después arranca el servidor integrado.
+      _asistente = true;
+      _cargarBandera();
+    }
+  }
+
+  Future<void> _cargarBandera() async {
+    final hecha = await widget.store.getFlag('asistenteCompletado');
+    if (!mounted) return;
+    setState(() {
+      _asistente = !hecha;
+      _bootstrap = hecha;
+    });
   }
 
   AppServices _buildServices() => AppServices(
@@ -299,14 +321,49 @@ class _VigiaRootState extends State<VigiaRoot> {
         configStore: store,
       );
       _bootstrap = false;
+      _asistente = false;
     });
+  }
+
+  Future<void> _onDecision(DecisionAsistente d) async {
+    final store = widget.store;
+    await store.setFlag('asistenteCompletado', true);
+    if (d is DecisionLocal) {
+      setState(() {
+        _asistente = false;
+        _bootstrap = true;
+      });
+    } else if (d is DecisionRed) {
+      await store.saveOverride(d.url);
+      final config = await store.load();
+      setState(() {
+        _asistente = false;
+        _config = config;
+        _services = AppServices(
+          config: config,
+          api: ApiClient(
+            baseUrl: config.apiBase,
+            client: createHttpClient(caCertificatePath: config.caCertificatePath),
+          ),
+          configStore: store,
+        );
+      });
+    } else {
+      setState(() => _asistente = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_bootstrap) {
-      return BootstrapScreen(onDone: _onDone);
+    Widget contenido;
+    if (_asistente) {
+      contenido = AsistenteScreen(onDecision: _onDecision, onFlag: () async {});
+    } else if (_bootstrap) {
+      contenido = BootstrapScreen(onDone: _onDone);
+    } else {
+      contenido = LexairApp(services: _services);
     }
-    return LexairApp(services: _services);
+    final bar = barra.crearBarraTitulo(_asistente ? null : _badge());
+    return Column(children: [bar, Expanded(child: contenido)]);
   }
 }

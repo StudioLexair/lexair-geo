@@ -61,8 +61,17 @@ Source: "{#SourceDir}\datos_ejemplo\*"; DestDir: "{app}\datos_ejemplo"; Flags: i
 Source: "{#ServidorDir}\*"; DestDir: "{app}\servidor"; Flags: ignoreversion recursesubdirs createallsubdirs; Tasks: integrado
 #endif
 
+[InstallDelete]
+; Iconos de versiones anteriores (LEXAIR GEO) para que no queden duplicados.
+Type: files; Name: "{autodesktop}\LEXAIR GEO.lnk"
+Type: files; Name: "{group}\LEXAIR GEO.lnk"
+Type: files; Name: "{group}\Desinstalar LEXAIR GEO.lnk"
+Type: files; Name: "{commondesktop}\LEXAIR GEO.lnk"
+Type: files; Name: "{commonprograms}\LEXAIR GEO\*.*"
+Type: dirifempty; Name: "{commonprograms}\LEXAIR GEO"
+
 [Dirs]
-Name: "{commonappdata}\LexairGeo"; Permissions: users-readexec
+Name: "{commonappdata}\LexairGeo"; Permissions: users-modify
 
 [Icons]
 Name: "{group}\VIGÍA"; Filename: "{app}\lexair_geo.exe"
@@ -131,8 +140,21 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
-var Cfg, Url, CaDest, Term: string;
+var Cfg, Url, CaDest, Term, Datos: string;
 begin
+  // Versiones anteriores: preguntar si se conservan los datos existentes.
+  if CurStep = ssInstall then begin
+    Datos := ExpandConstant('{localappdata}\VIGIA\datos');
+    if DirExists(Datos) then begin
+      if MsgBox('Se ha detectado una instalación anterior con datos guardados.'
+        #13#10#13#10 '¿Desea CONSERVAR los datos existentes? (Recomendado: conserva '
+        'la base, las zonas y las ubicaciones marcadas.)'
+        #13#10#13#10 'Elija «No» solo si quiere empezar de cero; en ese caso los '
+        'datos anteriores se eliminarán.',
+        'VIGÍA · Datos de una versión anterior', mbYesNo, MB_ICONQUESTION, IDYES) = IDNO then
+        DelTree(Datos, True, True, True);
+    end;
+  end;
   if CurStep = ssPostInstall then begin
     CaDest := ExpandConstant('{commonappdata}\LexairGeo\lexair-geo-ca.crt');
     if HasCaFile then

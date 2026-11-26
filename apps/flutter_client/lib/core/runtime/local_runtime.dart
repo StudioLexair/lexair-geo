@@ -23,3 +23,17 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
   void Function(String paso, String estado)? onPaso,
 }) =>
     impl.ensureServidorIntegrado(onLog: onLog, onPaso: onPaso);
+
+/// Guarda la configuración local del modo integrado (puertos y cuenta
+/// inicial). Solo escritorio con carpeta de usuario disponible.
+Future<void> guardarConfigLocal({
+  int? puertoApi,
+  int? puertoBd,
+  String? usuarioAdmin,
+  String? claveAdmin,
+}) =>
+    impl.guardarConfigLocal(
+        puertoApi: puertoApi,
+        puertoBd: puertoBd,
+        usuarioAdmin: usuarioAdmin,
+        claveAdmin: claveAdmin);

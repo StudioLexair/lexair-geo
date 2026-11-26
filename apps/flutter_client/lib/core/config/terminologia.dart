@@ -47,17 +47,47 @@ class Terminologia {
     _v = Map.of(defaults)..addAll(overrides);
   }
 
-  /// Rutas candidatas del fichero externo (misma política que config.json).
+  /// Rutas candidatas del fichero externo: usuario (%LOCALAPPDATA%\VIGIA),
+  /// equipo (%PROGRAMDATA%\LexairGeo) y junto al ejecutable.
   static List<String> _rutas() {
     if (kIsWeb) return const [];
     final rutas = <String>[];
     try {
+      final lad = Platform.environment['LOCALAPPDATA'];
+      if (lad != null) rutas.add('$lad\\VIGIA\\terminologia.json');
       rutas.add(
           '${File(Platform.resolvedExecutable).parent.path}${Platform.pathSeparator}terminologia.json');
       final pd = Platform.environment['PROGRAMDATA'];
       if (pd != null) rutas.add('$pd\\LexairGeo\\terminologia.json');
     } catch (_) {}
     return rutas;
+  }
+
+  /// Ruta donde el asistente escribe la personalización del usuario.
+  static String? rutaUsuario() {
+    if (kIsWeb) return null;
+    try {
+      final lad = Platform.environment['LOCALAPPDATA'];
+      if (lad != null) return '$lad\\VIGIA\\terminologia.json';
+    } catch (_) {}
+    return null;
+  }
+
+  /// Escribe (o borra con null) la personalización del usuario y la aplica.
+  Future<void> saveOverrides(Map<String, String>? overrides) async {
+    final ruta = rutaUsuario();
+    if (ruta == null) return;
+    try {
+      final f = File(ruta);
+      if (overrides == null || overrides.isEmpty) {
+        if (f.existsSync()) f.deleteSync();
+      } else {
+        f.parent.createSync(recursive: true);
+        const enc = JsonEncoder.withIndent('  ');
+        await f.writeAsString(enc.convert(overrides));
+      }
+    } catch (_) {}
+    apply(overrides ?? const {});
   }
 
   /// Carga el fichero externo si existe y fusiona sobre los valores por

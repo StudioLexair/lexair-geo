@@ -11,3 +11,10 @@ Future<LocalRuntimePlan?> detectServidorIntegrado() async => null;
 Future<LocalRuntimePlan?> ensureServidorIntegrado(
     {void Function(String)? onLog, void Function(String paso, String estado)? onPaso}) async =>
     null;
+
+Future<void> guardarConfigLocal({
+  int? puertoApi,
+  int? puertoBd,
+  String? usuarioAdmin,
+  String? claveAdmin,
+}) async {}

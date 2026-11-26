@@ -36,8 +36,9 @@ class _ServerSettingsDialogState extends State<ServerSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final esLocal = _url.text.contains('127.0.0.1') || _url.text.contains('localhost');
     return AlertDialog(
-      title: const Text('Servidor LEXAIR GEO'),
+      title: const Text('Servidor'),
       content: SizedBox(
         width: 420,
         child: Column(
@@ -47,6 +48,18 @@ class _ServerSettingsDialogState extends State<ServerSettingsDialog> {
             Text('Valor actual: ${widget.config.serverUrl} (${widget.config.source})',
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 12),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: true, icon: Icon(Icons.computer, size: 16), label: Text('Modo de prueba')),
+                ButtonSegment(value: false, icon: Icon(Icons.lan, size: 16), label: Text('Modo de red')),
+              ],
+              selected: {esLocal},
+              onSelectionChanged: (sel) {
+                setState(() => _url.text = sel.first ? 'http://127.0.0.1:3000' : 'https://geo.internal');
+                _error = null;
+              },
+            ),
+            const SizedBox(height: 10),
             TextField(
               key: const Key('server-url-field'),
               controller: _url,

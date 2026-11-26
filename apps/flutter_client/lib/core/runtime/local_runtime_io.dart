@@ -33,24 +33,32 @@ const String _adminUser = 'yolexis';
 const String _adminPassword = '123k20@A';
 
 /// Configuración local opcional del servidor integrado
-/// (%LOCALAPPDATA%\VIGIA\servidor-local.json): { "puertoApi": 3000, "puertoBD": 5433 }.
-Future<(int, int)> _puertosConfigurados() async {
-  var api = 3000;
-  var bd = 5433;
+/// (%LOCALAPPDATA%\VIGIA\servidor-local.json): { "puertoApi": 3000,
+/// "puertoBD": 5433, "usuarioAdmin": "...", "claveAdmin": "..." }.
+Map<String, dynamic> _configLocal() {
   try {
     final local = Platform.environment['LOCALAPPDATA'];
     if (local != null) {
       final f = File('$local\\VIGIA\\servidor-local.json');
       if (f.existsSync()) {
         final dec = jsonDecode(f.readAsStringSync());
-        if (dec is Map<String, dynamic>) {
-          api = (dec['puertoApi'] as num?)?.toInt() ?? api;
-          bd = (dec['puertoBD'] as num?)?.toInt() ?? bd;
-        }
+        if (dec is Map<String, dynamic>) return dec;
       }
     }
   } catch (_) {}
+  return const {};
+}
+
+(int, int) _puertosConfigurados(Map<String, dynamic> cfg) {
+  final api = (cfg['puertoApi'] as num?)?.toInt() ?? 3000;
+  final bd = (cfg['puertoBD'] as num?)?.toInt() ?? 5433;
   return (api.clamp(1024, 65000), bd.clamp(1024, 65000));
+}
+
+/// ¿Hay un PostgreSQL respondiendo en ese puerto? (puede ser una copia
+/// anterior nuestra que sigue viva: se reutiliza en vez de fallar).
+Future<bool> _pgListo(int port) async {
+  return _esperarPuerto(port, const Duration(milliseconds: 1200));
 }
 
 Future<bool> _puertoLibre(int port) async {
@@ -61,6 +69,44 @@ Future<bool> _puertoLibre(int port) async {
   } catch (_) {
     return false;
   }
+}
+
+/// Guarda la configuración local del modo integrado (puertos fijos y cuenta
+/// inicial). Con valor null se elimina esa clave del fichero.
+Future<void> guardarConfigLocal({
+  int? puertoApi,
+  int? puertoBd,
+  String? usuarioAdmin,
+  String? claveAdmin,
+}) async {
+  final local = Platform.environment['LOCALAPPDATA'];
+  if (local == null) return;
+  final dir = Directory('$local\\VIGIA');
+  if (!dir.existsSync()) dir.createSync(recursive: true);
+  final f = File('$local\\VIGIA\\servidor-local.json');
+  Map<String, dynamic> actual = const {};
+  if (f.existsSync()) {
+    try {
+      final d = jsonDecode(f.readAsStringSync());
+      if (d is Map<String, dynamic>) actual = d;
+    } catch (_) {}
+  }
+  void set(String k, String? v, int? n) {
+    if (n != null) {
+      actual[k] = n;
+    } else if (v != null && v.trim().isNotEmpty) {
+      actual[k] = v.trim();
+    } else {
+      actual.remove(k);
+    }
+  }
+
+  set('puertoApi', null, puertoApi);
+  set('puertoBd', null, puertoBd);
+  set('usuarioAdmin', usuarioAdmin, null);
+  set('claveAdmin', claveAdmin, null);
+  const enc = JsonEncoder.withIndent('  ');
+  await f.writeAsString(enc.convert(actual));
 }
 
 /// Detecta el paquete del servidor integrado junto al ejecutable.
@@ -101,7 +147,7 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
   }
 
   // ¿Hay un servidor nuestro ya activo (por ejemplo arrancado antes)?
-  final cfg = await _puertosConfigurados();
+  final cfg = _puertosConfigurados(_configLocal());
   if (await _apiOk('http://127.0.0.1:${cfg.$1}')) {
     log('Servidor integrado ya activo en el puerto ${cfg.$1}');
     return LocalRuntimePlan(
@@ -111,26 +157,42 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
     );
   }
 
-  // Elección de puertos: configurado → +25, saltando los ocupados.
+  // Elección de puertos: configurado → siguientes. Un puerto ocupado por
+  // UNA COPIA NUESTRA (base o servidor ya iniciados) se reutiliza; los que
+  // ocupa otra aplicación se saltan.
   log('Buscando puertos libres (API desde ${cfg.$1}, base desde ${cfg.$2})…');
   var puertoApi = -1;
+  var reusarApi = false;
   for (var p = cfg.$1; p <= cfg.$1 + 25; p++) {
     if (await _puertoLibre(p)) {
       puertoApi = p;
       break;
     }
+    if (await _apiOk('http://127.0.0.1:$p')) {
+      puertoApi = p;
+      reusarApi = true;
+      break;
+    }
   }
   if (puertoApi < 0) throw Exception('No hay puertos libres para el servidor');
   var puertoBd = -1;
+  var reusarBd = false;
   for (var p = cfg.$2; p <= cfg.$2 + 25; p++) {
     if (await _puertoLibre(p)) {
       puertoBd = p;
       break;
     }
+    if (await _pgListo(p)) {
+      puertoBd = p;
+      reusarBd = true;
+      break;
+    }
   }
   if (puertoBd < 0) throw Exception('No hay puertos libres para la base de datos');
-  if (puertoApi != cfg.$1 || puertoBd != cfg.$2) {
-    log('Puerto configurado ocupado: se usará API $puertoApi y base $puertoBd');
+  if (reusarApi || reusarBd) {
+    log('Reutilizando servicios ya en marcha (API $puertoApi, base $puertoBd)…');
+  } else if (puertoApi != cfg.$1 || puertoBd != cfg.$2) {
+    log('Puerto configurado ocupado por otra aplicación: se usará API $puertoApi y base $puertoBd');
   }
 
   final plan = LocalRuntimePlan(
@@ -241,31 +303,42 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
         .toString()
         .trim();
     if (users == '0') {
-      log('Creando cuenta inicial ($_adminUser)…');
+      final cfgLocal = _configLocal();
+      final usuario = (cfgLocal['usuarioAdmin'] as String?)?.trim().isNotEmpty == true
+          ? (cfgLocal['usuarioAdmin'] as String).trim()
+          : _adminUser;
+      final clave = (cfgLocal['claveAdmin'] as String?)?.trim().isNotEmpty == true
+          ? (cfgLocal['claveAdmin'] as String).trim()
+          : _adminPassword;
+      log('Creando cuenta inicial ($usuario)…');
       final r = _run(plan.nodeExe,
-          ['api/dist/cli/create-admin.js', '--username', _adminUser, '--allow-weak'],
+          ['api/dist/cli/create-admin.js', '--username', usuario, '--allow-weak'],
           workingDirectory: plan.baseDir,
           env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
-                'LEXAIR_ADMIN_PASSWORD': _adminPassword, 'NODE_ENV': 'production'});
+                'LEXAIR_ADMIN_PASSWORD': clave, 'NODE_ENV': 'production'});
       if (r.exitCode != 0) throw Exception('create-admin falló: ${_tail(r)}');
     } else {
       paso('cuenta', 'omitido');
     }
     if (users == '0') paso('cuenta', 'listo');
 
-    // 7 · API.
+    // 7 · API (si ya responde, se reutiliza).
     paso('api', 'iniciando');
-    log('Iniciando servidor local (puerto $puertoApi)…');
-    await Process.start(
-      plan.nodeExe,
-      ['api/dist/index.js'],
-      workingDirectory: plan.baseDir,
-      environment: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
-          'NODE_ENV': 'production', 'PORT': '$puertoApi'},
-      mode: ProcessStartMode.detached,
-    );
-    if (!await _esperarApi(plan.serverUrl, const Duration(seconds: 90))) {
-      throw Exception('El servidor no respondió en ${plan.serverUrl}');
+    if (reusarApi) {
+      log('Servidor local ya en marcha en el puerto $puertoApi.');
+    } else {
+      log('Iniciando servidor local (puerto $puertoApi)…');
+      await Process.start(
+        plan.nodeExe,
+        ['api/dist/index.js'],
+        workingDirectory: plan.baseDir,
+        environment: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
+            'NODE_ENV': 'production', 'PORT': '$puertoApi'},
+        mode: ProcessStartMode.detached,
+      );
+      if (!await _esperarApi(plan.serverUrl, const Duration(seconds: 90))) {
+        throw Exception('El servidor no respondió en ${plan.serverUrl}');
+      }
     }
     paso('api', 'listo');
     log('Servidor integrado listo en ${plan.serverUrl}');
