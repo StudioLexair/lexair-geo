@@ -152,7 +152,7 @@ begin
         'Elija «No» solo si quiere empezar de cero; en ese caso los datos ' +
         'anteriores se eliminarán.';
       if MsgBox(Mensaje, 'VIGÍA · Datos de una versión anterior',
-        mbYesNo, MB_ICONQUESTION, IDYES) = IDNO then
+        MB_YESNO, MB_ICONQUESTION, IDYES) = IDNO then
         DelTree(Datos, True, True, True);
     end;
   end;
