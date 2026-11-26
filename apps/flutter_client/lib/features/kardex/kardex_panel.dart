@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +14,7 @@ import '../map/map_markers.dart' show fmtDateIso;
 import '../map/workspace_controller.dart';
 import '../persons/location_dialog.dart';
 import '../persons/person.dart';
+import '../persons/photo_cache.dart';
 import '../../core/config/terminologia.dart';
 import '../passes/pass.dart';
 
@@ -199,7 +203,7 @@ class _KardexPanelState extends State<KardexPanel> {
                             child: CircularProgressIndicator(strokeWidth: 2))));
                   }
                   final p = _rows[i];
-                  return KardexPersonTile(person: p);
+                  return KardexPersonTile(person: p, onUpdated: _reload);
                 },
               )),
         ]),
@@ -211,8 +215,9 @@ class _KardexPanelState extends State<KardexPanel> {
 /// Ficha del kardex: foto/iniciales a la izquierda, nombre al lado; se toca
 /// para el modal completo y se arrastra al mapa para marcar la residencia.
 class KardexPersonTile extends StatelessWidget {
-  const KardexPersonTile({super.key, required this.person});
+  const KardexPersonTile({super.key, required this.person, this.onUpdated});
   final Person person;
+  final VoidCallback? onUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +249,7 @@ class KardexPersonTile extends StatelessWidget {
       child: GestureDetector(
         key: Key('kardex-tile-${person.code}'),
         onTap: () async {
-          final updated = await showKardexPersonModal(context, person: person);
+          final updated = await showKardexPersonModal(context, person: person, onUpdated: onUpdated);
           if (updated != null) ws.replaceSelected(updated);
         },
         child: _tile(context, located),
@@ -296,24 +301,39 @@ Widget kardexAvatar(Person p, double radius) {
   return CircleAvatar(
     radius: radius,
     backgroundColor: LexairColors.sidebar,
-    child: Text(initials, style: TextStyle(color: Colors.white, fontSize: radius * 0.62)),
+    child: FutureBuilder<Uint8List?>(
+      future: PhotoCache.I.get(p.id),
+      builder: (context, snap) {
+        final bytes = snap.data;
+        if (bytes != null && bytes.isNotEmpty) {
+          return ClipOval(
+            child: Image.memory(bytes,
+                width: radius * 2, height: radius * 2, fit: BoxFit.cover,
+                gaplessPlayback: true),
+          );
+        }
+        return Text(initials, style: TextStyle(color: Colors.white, fontSize: radius * 0.62));
+      },
+    ),
   );
 }
 
 /// Modal con TODOS los datos cargados de la persona (ficha, ubicación,
 /// interno, pases) y acciones de marcado preciso en el mapa.
-Future<Person?> showKardexPersonModal(BuildContext context, {required Person person}) =>
-    showDialog<Person>(context: context, builder: (_) => _KardexPersonModal(person: person));
+Future<Person?> showKardexPersonModal(BuildContext context, {required Person person, void Function()? onUpdated}) =>
+    showDialog<Person>(context: context, builder: (_) => _KardexPersonModal(person: person, onUpdated: onUpdated));
 
 class _KardexPersonModal extends StatefulWidget {
-  const _KardexPersonModal({required this.person});
+  const _KardexPersonModal({required this.person, this.onUpdated});
   final Person person;
+  final void Function()? onUpdated;
 
   @override
   State<_KardexPersonModal> createState() => _KardexPersonModalState();
 }
 
 class _KardexPersonModalState extends State<_KardexPersonModal> {
+  late Person _person = widget.person;
   bool _loadingPasses = true;
   Inmate? _inmate;
   List<Pass> _passes = const [];
@@ -345,12 +365,106 @@ class _KardexPersonModalState extends State<_KardexPersonModal> {
     }
   }
 
+  Future<void> _cambiarFoto() async {
+    final f = await FilePicker.pickFile(type: FileType.image);
+    if (f == null || !mounted) return;
+    final ws = context.read<WorkspaceController>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes = await f.readAsBytes();
+      if (bytes.length > 3 * 1024 * 1024) {
+        messenger.showSnackBar(const SnackBar(content: Text('La imagen supera 3 MB')));
+        return;
+      }
+      final ruta = (f.path ?? '').toLowerCase();
+      final mime = ruta.endsWith('.png') ? 'image/png'
+          : ruta.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+      await ws.persons.uploadPhoto(_person.id, bytes, mime);
+      if (!mounted) return;
+      setState(() {});
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.userMessage)));
+    }
+  }
+
+  Future<void> _quitarFoto() async {
+    final ws = context.read<WorkspaceController>();
+    try {
+      await ws.persons.removePhoto(_person.id);
+      if (!mounted) return;
+      setState(() {});
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.userMessage)));
+    }
+  }
+
+  /// Edita teléfono, CDR, zona y notas (PATCH /persons/:id).
+  Future<void> _editarFicha() async {
+    final phone = TextEditingController(text: _person.phone ?? '');
+    final cdr = TextEditingController(text: _person.cdr ?? '');
+    final zona = TextEditingController(text: _person.defenseZone ?? '');
+    final notas = TextEditingController(text: _person.notes ?? '');
+    final updated = await showDialog<Person>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Editar ficha'),
+        content: SizedBox(
+          width: 380,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: phone,
+                decoration: const InputDecoration(labelText: 'Teléfono')),
+            const SizedBox(height: 10),
+            TextField(controller: cdr,
+                decoration: const InputDecoration(labelText: 'CDR')),
+            const SizedBox(height: 10),
+            TextField(controller: zona,
+                decoration: const InputDecoration(labelText: 'Zona de defensa')),
+            const SizedBox(height: 10),
+            TextField(controller: notas, maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Notas')),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () async {
+              final ws = ctx.read<WorkspaceController>();
+              String? limpiar(String v) => v.trim().isEmpty ? null : v.trim();
+              try {
+                final r = await ws.persons.update(_person.id, {
+                  'phone': limpiar(phone.text),
+                  'cdr': limpiar(cdr.text),
+                  'defenseZone': limpiar(zona.text),
+                  'notes': limpiar(notas.text),
+                });
+                if (ctx.mounted) Navigator.of(ctx).pop(r);
+              } on ApiException catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(e.userMessage)));
+                }
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    if (updated != null && mounted) {
+      setState(() => _person = updated);
+      widget.onUpdated?.call();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final p = widget.person;
+    final p = _person;
     final loc = p.location;
     final ws = context.read<WorkspaceController>();
-    final canWriteLocation = context.read<AuthController>().user?.can('locations.write') ?? false;
+    final user = context.read<AuthController>().user;
+    final canWriteLocation = user?.can('locations.write') ?? false;
+    final canWritePersons = user?.can('persons.write') ?? false;
     return AlertDialog(
       titlePadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -362,6 +476,20 @@ class _KardexPersonModalState extends State<_KardexPersonModal> {
           Text('Código ${p.code} · ${p.isActive ? 'activo' : 'inactivo'}',
               style: const TextStyle(fontSize: 12, color: LexairColors.muted)),
         ])),
+        if (canWritePersons)
+          PopupMenuButton<String>(
+            tooltip: 'Foto',
+            icon: const Icon(Icons.photo_camera_outlined, size: 20),
+            onSelected: (v) {
+              if (v == 'cambiar') _cambiarFoto();
+              if (v == 'quitar') _quitarFoto();
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(value: 'cambiar', child: Text('Cambiar foto…')),
+              if (PhotoCache.I.hasPhoto(p.id))
+                const PopupMenuItem(value: 'quitar', child: Text('Quitar foto')),
+            ],
+          ),
       ]),
       content: SizedBox(
         width: 480,
@@ -369,6 +497,8 @@ class _KardexPersonModalState extends State<_KardexPersonModal> {
           _section('Identificación', [
             _row('Código', p.code),
             _row('Teléfono', p.phone ?? '—'),
+            if (p.cdr != null && p.cdr!.isNotEmpty) _row('CDR', p.cdr!),
+            if (p.defenseZone != null && p.defenseZone!.isNotEmpty) _row('Zona de defensa', p.defenseZone!),
             _row('Origen del dato', p.dataSource),
             _row('Grupos', p.groups.join(', ')),
             _row('Visibilidad', p.visibility),
@@ -424,7 +554,7 @@ class _KardexPersonModalState extends State<_KardexPersonModal> {
             icon: const Icon(Icons.my_location, size: 16),
             label: const Text('Marcar en el mapa'),
             onPressed: () {
-              ws.startPickFor(widget.person);
+              ws.startPickFor(_person);
               Navigator.of(context).pop();
             },
           ),
@@ -433,11 +563,18 @@ class _KardexPersonModalState extends State<_KardexPersonModal> {
             label: const Text('Coordenadas…'),
             onPressed: () async {
               final navigator = Navigator.of(context);
-              final person = await showLocationDialog(context, widget.person, ws);
+              final person = await showLocationDialog(context, _person, ws);
               if (person != null && navigator.mounted) navigator.pop(person);
             },
           ),
         ],
+        if (canWritePersons)
+          TextButton.icon(
+            key: const Key('kardex-edit-person'),
+            icon: const Icon(Icons.edit_outlined, size: 16),
+            label: const Text('Editar ficha'),
+            onPressed: _editarFicha,
+          ),
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar')),
       ],
     );

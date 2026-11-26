@@ -9,6 +9,7 @@ export type PersonRow = {
   notes: string | null;
   cdr: string | null;
   defense_zone: string | null;
+  photo_at: Date | null;
   is_active: boolean;
   is_synthetic: boolean;
   visibility: string;
@@ -38,7 +39,7 @@ export type PersonRow = {
 export const PERSON_SELECT = `
   SELECT p.id, p.code, p.given_names, p.family_names, p.phone, p.notes, p.cdr, p.defense_zone, p.is_active,
          p.is_synthetic, p.visibility, p.consent_status, p.data_source, p.retention_until::text,
-         p.created_at, p.updated_at,
+         p.created_at, p.updated_at, pp.updated_at AS photo_at,
          ARRAY(SELECT g.code FROM directory.person_memberships m
                  JOIN directory.person_groups g ON g.id = m.group_id
                 WHERE m.person_id = p.id AND m.group_id = ANY($1::smallint[])
@@ -51,6 +52,7 @@ export const PERSON_SELECT = `
 export const PERSON_JOINS = `
   FROM directory.persons p
   LEFT JOIN geo.person_locations l ON l.person_id = p.id
+  LEFT JOIN directory.person_photos pp ON pp.person_id = p.id
   LEFT JOIN geo.municipalities mu ON mu.id = l.municipality_id
   LEFT JOIN geo.localities lo ON lo.id = l.locality_id`;
 
@@ -88,6 +90,7 @@ export function toPersonDto(r: PersonRow, user: AuthUser) {
     notes: exact ? r.notes : null,
     cdr: exact ? r.cdr : null,
     defenseZone: exact ? r.defense_zone : null,
+    photoUpdatedAt: r.photo_at?.toISOString() ?? null,
     isActive: r.is_active,
     isSynthetic: r.is_synthetic,
     visibility: r.visibility,

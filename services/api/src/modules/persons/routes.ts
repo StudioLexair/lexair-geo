@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { withTransaction } from '../../db/pool.js';
+import { createHash } from 'node:crypto';
 import { forbidden, notFound } from '../../lib/errors.js';
 import { buildPage } from '../../lib/pagination.js';
 import { allowedGroups, canSeeRestricted, guard, requireUser } from '../../plugins/auth.js';
@@ -120,6 +121,62 @@ export async function personRoutes(app: FastifyInstance): Promise<void> {
       return toPersonDto((await findPersonById(ctx.db, id, v))!, user);
     });
   }
+
+  /** Fotografía de la persona (una por persona; jpeg/png/webp ≤ 3 MB). */
+  app.get('/persons/:id/photo', { preHandler: guard('persons.read') }, async (req, reply) => {
+    const { id } = IdParams.parse(req.params);
+    const v = visibilityFor(ctx, req);
+    if (!(await findPersonById(ctx.db, id, v))) throw notFound('Persona no encontrada');
+    const { rows } = await ctx.db.query<{ mime: string; bytes: Buffer }>(
+      'SELECT mime, bytes FROM directory.person_photos WHERE person_id = $1', [id]);
+    const foto = rows[0];
+    if (!foto) return reply.code(404).send({ error: 'sin foto' });
+    return reply.type(foto.mime)
+      .header('Cache-Control', 'private, max-age=86400')
+      .send(foto.bytes);
+  });
+
+  app.put('/persons/:id/photo', { preHandler: guard('persons.write') }, async (req, reply) => {
+    const { id } = IdParams.parse(req.params);
+    const v = visibilityFor(ctx, req);
+    if (!(await findPersonById(ctx.db, id, v))) throw notFound('Persona no encontrada');
+    const bytes = req.body as Buffer | string | undefined;
+    if (!bytes || typeof bytes === 'string') {
+      return reply.code(400).send({ error: 'Imagen no válida' });
+    }
+    if (bytes.length < 64) {
+      return reply.code(400).send({ error: 'Imagen demasiado pequeña' });
+    }
+    const mime = String(req.headers['content-type'] ?? '').split(';')[0]?.trim() ?? '';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) {
+      return reply.code(415).send({ error: 'Formato no admitido (jpeg, png o webp)' });
+    }
+    const sha = createHash('sha256').update(bytes).digest('hex');
+    await withTransaction(ctx.db, async (c) => {
+      await c.query(
+        `INSERT INTO directory.person_photos (person_id, mime, bytes, sha256, updated_by)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (person_id) DO UPDATE SET mime = EXCLUDED.mime, bytes = EXCLUDED.bytes,
+           sha256 = EXCLUDED.sha256, updated_at = now(), updated_by = EXCLUDED.updated_by`,
+        [id, mime, bytes, sha, requireUser(req).id]);
+      await writeAudit(c, req, {
+        action: 'person.photo.set', entityType: 'person', entityId: id,
+        details: { mime, bytes: bytes.length, sha256: sha },
+      });
+    });
+    return { ok: true, sha256: sha, bytes: bytes.length };
+  });
+
+  app.delete('/persons/:id/photo', { preHandler: guard('persons.write') }, async (req) => {
+    const { id } = IdParams.parse(req.params);
+    const v = visibilityFor(ctx, req);
+    if (!(await findPersonById(ctx.db, id, v))) throw notFound('Persona no encontrada');
+    await withTransaction(ctx.db, async (c) => {
+      await c.query('DELETE FROM directory.person_photos WHERE person_id = $1', [id]);
+      await writeAudit(c, req, { action: 'person.photo.delete', entityType: 'person', entityId: id });
+    });
+    return { ok: true };
+  });
 
   app.put('/persons/:id/groups', { preHandler: guard('groups.manage') }, async (req) => {
     const { id } = IdParams.parse(req.params);

@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import '../../core/net/api_client.dart';
+import 'photo_cache.dart';
 import 'person.dart';
 
 class NearbyResult {
@@ -45,6 +48,18 @@ class PersonsRepository {
 
   Future<Person> update(String id, Map<String, dynamic> body) async =>
       Person.fromJson(await _api.patchJson('/persons/$id', body));
+
+  /// Fotografía de la persona (jpeg/png/webp, máx. 3 MB).
+  Future<void> uploadPhoto(String id, List<int> bytes, String mime) async {
+    final r = await _api.putBytes('/persons/$id/photo', bytes, mime);
+    PhotoCache.I.invalidate(id, Uint8List.fromList(bytes));
+    assert(r.isNotEmpty);
+  }
+
+  Future<void> removePhoto(String id) async {
+    await _api.deleteJson('/persons/$id/photo');
+    PhotoCache.I.invalidate(id, null);
+  }
 
   Future<Person> setActive(String id, bool active) async => Person.fromJson(
       await _api.postJson('/persons/$id/${active ? 'reactivate' : 'deactivate'}'));

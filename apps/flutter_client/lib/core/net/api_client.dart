@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -46,6 +47,23 @@ class ApiClient {
   Future<Json> postText(String path, String text, String contentType, Map<String, Object?> query) =>
       _send('POST', uri(path, query), rawBody: text, contentType: contentType);
 
+  /// Descarga binaria (p. ej. la foto de una persona). null si no existe (404).
+  Future<Uint8List?> getBytes(String path, [Map<String, Object?>? query]) async {
+    final res = await _raw('GET', uri(path, query));
+    if (res.statusCode == 404) return null;
+    _throwIfError(res);
+    return res.bodyBytes;
+  }
+
+  /// Subida binaria (p. ej. la foto) con su propio Content-Type.
+  Future<Json> putBytes(String path, List<int> bytes, String contentType) async {
+    final res = await _raw('PUT', uri(path), binaryBody: bytes, contentType: contentType);
+    _throwIfError(res);
+    if (res.bodyBytes.isEmpty) return <String, dynamic>{};
+    final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+    return decoded is Json ? decoded : <String, dynamic>{'items': decoded};
+  }
+
   /// Descarga binaria/texto (exportaciones CSV).
   Future<String> getText(String path, [Map<String, Object?>? query]) async {
     final res = await _raw('GET', uri(path, query));
@@ -76,12 +94,16 @@ class ApiClient {
     String method,
     Uri url, {
     String? body,
+    List<int>? binaryBody,
     String contentType = 'application/json',
   }) async {
     final req = http.Request(method, url)
       ..headers.addAll(authHeaders)
       ..headers['Accept'] = 'application/json';
-    if (body != null) {
+    if (binaryBody != null) {
+      req.headers['Content-Type'] = contentType;
+      req.bodyBytes = binaryBody;
+    } else if (body != null) {
       req.headers['Content-Type'] = '$contentType; charset=utf-8';
       req.body = body;
     }
