@@ -1,0 +1,123 @@
+════════════════════════════════════════════════════════════════════
+ VIGÍA · Guía rápida de instalación
+════════════════════════════════════════════════════════════════════
+
+CONTENIDO
+  1. Requisitos del equipo
+  2. Qué instala cada versión del instalador
+  3. Si Windows SmartScreen muestra un aviso
+  4. Modos de trabajo (servidor de red · prueba local · solo cliente)
+  5. Instalación silenciosa (para administradores)
+  6. Datos y actualizaciones
+  7. Problemas frecuentes
+
+────────────────────────────────────────────────────────────────────
+1. REQUISITOS DEL EQUIPO
+────────────────────────────────────────────────────────────────────
+  · Windows 10 o superior, 64 bits.
+  · Procesador de 2 núcleos o más.
+  · Memoria: 4 GB como cliente; 8 GB si este equipo será el servidor.
+  · Disco: 2 GB libres como cliente; 8 GB libres si instala el servidor.
+  · No necesita Internet: los mapas de Villa Clara y todo el catálogo
+    van dentro del programa.
+  · Solo el «servidor de red» conviene en un equipo que quede
+    encendido durante el horario de trabajo.
+
+────────────────────────────────────────────────────────────────────
+2. QUÉ INSTALA CADA VERSIÓN DEL INSTALADOR
+────────────────────────────────────────────────────────────────────
+  · Vigia-X.Y.Z-Cliente-x64.exe
+      Solo el programa. Se conecta al servidor de la red. Ligero
+      (unos quince megas) y rápido de instalar.
+  · Vigia-X.Y.Z-Servidor-x64.exe
+      El programa y el servidor integrado (base de datos local, API y
+      paquete cartográfico). Pensado para el equipo que atenderá a los
+      demás.
+  · Vigia-X.Y.Z-TodoEnUno-x64.exe
+      Todo lo anterior, y al instalar pregunta cómo se usará este
+      equipo: SERVIDOR DE RED, PRUEBA LOCAL o SOLO CLIENTE. Es la
+      opción recomendada cuando no se sabe de antemano, porque el modo
+      puede cambiarse después desde el asistente inicial del programa.
+
+────────────────────────────────────────────────────────────────────
+3. SI WINDOWS SMARTSCREEN MUESTRA UN AVISO
+────────────────────────────────────────────────────────────────────
+  El instalador no lleva firma comercial, así que la primera vez que
+  se ejecuta, Windows puede mostrar una ventana azul «Windows protegió
+  el equipo». Es normal en programas internos. Para continuar:
+
+      1) Pulse en «Más información» (aparece justo debajo del texto).
+      2) El botón cambia y aparece «Ejecutar de todas formas».
+      3) Pulse «Ejecutar de todas formas» y siga el asistente.
+
+  Esto también puede ocurrir la primera vez que se abre el propio
+  programa VIGÍA: se hace igual.
+
+────────────────────────────────────────────────────────────────────
+4. MODOS DE TRABAJO
+────────────────────────────────────────────────────────────────────
+  · Servidor de red: este equipo guarda la base de datos y atiende a
+    los demás. El instalador abre el puerto 3000 en el firewall de
+    Windows para que los clientes se conecten.
+  · Prueba local: servidor y programa en el mismo equipo, sin red.
+    Ideal para evaluar el sistema o trabajar en casa.
+  · Solo cliente: este equipo solo muestra el programa y se conecta al
+    servidor de la red. Si eligió «Solo cliente» y más adelante quiere
+    convertir este equipo en servidor, vuelva a ejecutar el instalador
+    TodoEnUno y elija el nuevo modo.
+
+  El modo y la dirección del servidor se pueden cambiar en cualquier
+  momento desde la pantalla de acceso del programa (botón de ajustes).
+
+────────────────────────────────────────────────────────────────────
+5. INSTALACIÓN SILENCIOSA (PARA ADMINISTRADORES)
+────────────────────────────────────────────────────────────────────
+  Desde una consola de comandos como administrador:
+
+      Vigia-X.Y.Z-TodoEnUno-x64.exe /VERYSILENT /ROLE=red
+      Vigia-X.Y.Z-TodoEnUno-x64.exe /VERYSILENT /ROLE=local
+      Vigia-X.Y.Z-TodoEnUno-x64.exe /VERYSILENT /ROLE=cliente /SERVERURL=https://geo.internal
+
+  Parámetros admitidos:
+      /VERYSILENT        instala sin ventanas
+      /ROLE=             red | local | cliente  (modo del equipo)
+      /SERVERURL=        URL del servidor que se guarda en el cliente
+      /CAFILE=           fichero .crt de la CA interna a confiar
+      /DIR="C:\Ruta"     carpeta de instalación
+  Ejemplo con CA interna:
+      Vigia-X.Y.Z-Cliente-x64.exe /VERYSILENT /SERVERURL=https://geo.internal ^
+        /CAFILE=C:\certs\lexair-geo-ca.crt
+
+  El asistente muestra música de fondo; en modo silencioso no suena.
+
+────────────────────────────────────────────────────────────────────
+6. DATOS Y ACTUALIZACIONES
+────────────────────────────────────────────────────────────────────
+  · Al actualizar, el instalador detecta los cambios frente a la
+    versión anterior (ficheros nuevos, actualizados y retirados) y se
+    reemplaza en el mismo sitio: no quedan iconos duplicados.
+  · Se le preguntará si desea CONSERVAR los datos existentes. La
+    respuesta recomendada es «Sí»: se conservan la base, las zonas y
+    las ubicaciones marcadas.
+  · La instalación vive en «C:\Program Files\LexairGeo» y los datos en
+    «%LOCALAPPDATA%\VIGIA\datos».
+  · La terminología (los nombres con que el programa llama a las
+    fichas, permisos, etc.) se personaliza copiando
+    «terminologia.ejemplo.json» como «terminologia.json» y editando
+    sus valores, en «%ALLUSERSPROFILE%\LexairGeo».
+
+────────────────────────────────────────────────────────────────────
+7. PROBLEMAS FRECUENTES
+────────────────────────────────────────────────────────────────────
+  · «El programa no abre» → compruebe en el Administrador de tareas
+    que no quede una copia anterior abierta; los registros están en
+    «%LOCALAPPDATA%\VIGIA\logs».
+  · «Los clientes no conectan al servidor de red» → verifique que el
+    servidor esté encendido, que el firewall admita el puerto 3000 y
+    que la URL del cliente apunte al servidor.
+  · «SmartScreen» → apartado 3 de esta guía.
+  · «Quiero empezar de cero» → desinstale VIGÍA, y cuando el
+    desinstalador pregunte, acepte borrar los datos; o responda «No»
+    a conservar datos al reinstalar.
+
+  Studio Lexair · VIGÍA (Lexair Geo)

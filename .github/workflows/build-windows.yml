@@ -128,11 +128,38 @@ jobs:
           Compress-Archive -Path "$rel\*" -DestinationPath "..\..\out\Vigia-$ver-windows-x64-portable.zip" -Force
           "VERSION=$ver" | Out-File -Append $env:GITHUB_ENV
 
-      - name: Instalador offline (Inno Setup)
+      - name: Instaladores offline (Inno Setup) · Cliente / Servidor / TodoEnUno
         run: |
+          $ErrorActionPreference = 'Stop'
           $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue
           if (-not $iscc) { choco install innosetup --version=6.7.1 -y --no-progress; $env:Path += ';C:\Program Files (x86)\Inno Setup 6' }
-          iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$PWD\build\windows\x64\runner\Release" "/DServidorDir=$PWD\build\windows\x64\runner\Release\servidor" "/DOutDir=$PWD\..\..\out" windows\installer\lexair_geo.iss
+          $rel = "$PWD\build\windows\x64\runner\Release"
+          # Stage del programa SIN servidor (robocopy /XD): el servidor entra
+          # solo por su propia entrada de [Files], según el rol elegido.
+          $stage = Join-Path $env:RUNNER_TEMP 'stage-app'
+          robocopy $rel $stage /E /XD "$rel\servidor" /NFL /NDL /NJH /NJS | Out-Null
+          if ($LASTEXITCODE -ge 8) { throw "robocopy falló con código $LASTEXITCODE" }
+          $global:LASTEXITCODE = 0
+          $man = Join-Path $env:RUNNER_TEMP 'manifiestos'
+          # Manifiesto SHA-256 (sha en minúsculas + dos espacios + ruta relativa),
+          # uno por modo y SIEMPRE con el nombre manifiesto.txt (lo extrae el instalador).
+          function Gen-Manifiesto([string]$Root, [string]$Dest) {
+            $archivos = Get-ChildItem -LiteralPath $Root -Recurse -File | Sort-Object FullName
+            $lineas = foreach ($f in $archivos) {
+              $relativa = $f.FullName.Substring($Root.Length + 1)
+              "{0}  {1}" -f (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToLower(), $relativa
+            }
+            $carpeta = Split-Path $Dest -Parent
+            New-Item -ItemType Directory -Force $carpeta | Out-Null
+            $lineas | Set-Content -LiteralPath $Dest -Encoding ascii
+          }
+          Gen-Manifiesto $stage (Join-Path $man 'cliente\manifiesto.txt')
+          Gen-Manifiesto $rel (Join-Path $man 'servidor\manifiesto.txt')
+          Gen-Manifiesto $rel (Join-Path $man 'todo\manifiesto.txt')
+          # Tres instaladores desde un mismo script
+          iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DOutDir=$PWD\..\..\out" "/DModo=cliente" "/DManifiestoFile=$(Join-Path $man 'cliente\manifiesto.txt')" windows\installer\lexair_geo.iss
+          iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DServidorDir=$rel\servidor" "/DOutDir=$PWD\..\..\out" "/DModo=servidor" "/DManifiestoFile=$(Join-Path $man 'servidor\manifiesto.txt')" windows\installer\lexair_geo.iss
+          iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DServidorDir=$rel\servidor" "/DOutDir=$PWD\..\..\out" "/DModo=todo" "/DManifiestoFile=$(Join-Path $man 'todo\manifiesto.txt')" windows\installer\lexair_geo.iss
 
       - name: Sumas SHA-256
         working-directory: out

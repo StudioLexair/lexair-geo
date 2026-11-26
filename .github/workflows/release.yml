@@ -94,10 +94,12 @@ jobs:
           body: |
             Borrador generado por CI. Revise y pruebe antes de publicar internamente.
 
-            Contenido: instalador Windows (Vigia-{versión}-Setup-x64.exe), ZIP portable
-            (Vigia-{versión}-windows-x64-portable.zip), cliente Web (lexair-geo-web-*)
-            y paquete de servidor (lexair-geo-server-*). El paquete cartográfico y el
-            catálogo se generan por separado (workflow build-map, ver docs/MAP_DATA.md).
+            Contenido: instaladores Windows (Vigia-{versión}-Cliente-x64.exe,
+            Vigia-{versión}-Servidor-x64.exe y Vigia-{versión}-TodoEnUno-x64.exe),
+            ZIP portable (Vigia-{versión}-windows-x64-portable.zip), cliente Web
+            (lexair-geo-web-*) y paquete de servidor (lexair-geo-server-*). El
+            paquete cartográfico y el catálogo se generan por separado (workflow
+            build-map, ver docs/MAP_DATA.md).
             - Paquete de servidor offline (sin mapas; ver docs/MAP_DATA.md)
             - Cliente Windows: ZIP portable e instalador offline
             Datos cartográficos © OpenStreetMap contributors (ODbL 1.0).
