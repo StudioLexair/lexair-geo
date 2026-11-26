@@ -17,19 +17,25 @@ Artefactos (`lexair-geo-windows-X.Y.Z`):
 
 | Archivo | Contenido |
 |---------|-----------|
-| `LexairGeo-X.Y.Z-windows-x64.zip` | Carpeta completa: `lexair_geo.exe`, `flutter_windows.dll`, DLL de plugins, `data\` (`app.so`, `icudtl.dat`, `flutter_assets`), `config.example.json` |
-| `LexairGeo-X.Y.Z-Setup-x64.exe` | Instalador offline Inno Setup 6.7.1 (todo incluido, sin descargas) |
+| `Vigia-X.Y.Z-windows-x64-portable.zip` | Carpeta completa: `lexair_geo.exe`, `flutter_windows.dll`, DLL de plugins, `data\`, `servidor\` (PostgreSQL+PostGIS, Node, API), `datos_ejemplo\` |
+| `Vigia-X.Y.Z-Cliente-x64.exe` | Instalador solo del programa (se conecta al servidor de la red) |
+| `Vigia-X.Y.Z-Servidor-x64.exe` | Instalador del programa + servidor integrado (equipo que atiende a la red) |
+| `Vigia-X.Y.Z-TodoEnUno-x64.exe` | Instalador con selección de rol: servidor de red · prueba local · solo cliente (cambiable después desde el programa) |
 | `SHA256SUMS-windows.txt` | Sumas de verificación |
 
-El flujo comprueba que `lexair_geo.exe`, `flutter_windows.dll`, `data\icudtl.dat` y
-`data\app.so` existen antes de empaquetar.
+El flujo comprueba que `lexair_geo.exe`, `flutter_windows.dll`, `data\icudtl.dat`,
+`data\app.so` y el paquete del servidor existen antes de empaquetar. Cada instalador
+incluye un manifiesto SHA-256 de su contenido: al actualizar, compara con la versión
+anterior instalada (ficheros nuevos, actualizados y retirados), avisa y limpia los
+obsoletos.
 
 ## Instalación
 
-Interactiva: el asistente pide la URL del servidor. Silenciosa (despliegue en 30 puestos):
+Interactiva: el asistente pide el modo (en TodoEnUno) y la URL del servidor; trae
+música de fondo con botón de silencio. Silenciosa (despliegue en 30 puestos):
 
 ```bat
-LexairGeo-0.1.0-Setup-x64.exe /VERYSILENT /SERVERURL=https://geo.internal /CAFILE=\\servidor\share\lexair-geo-ca.crt
+Vigia-X.Y.Z-TodoEnUno-x64.exe /VERYSILENT /ROLE=cliente /SERVERURL=https://geo.internal /CAFILE=\\servidor\share\lexair-geo-ca.crt
 ```
 
 - Instala en `C:\Program Files\LexairGeo`.

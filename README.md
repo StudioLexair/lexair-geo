@@ -7,12 +7,20 @@ configurable, personal de la fuerza cercano con teléfonos, kardex arrastrable
 al mapa para fijar residencias exactas y carga de datos desde Oracle 11g.
 
 - Servidor único Ubuntu Server LTS de 8 GB en red local, sin Internet.
-- 10–30 puestos cliente: aplicación **Windows** (instalador offline o ZIP portable)
+- 10–30 puestos cliente: aplicación **Windows** (tres instaladores: Cliente,
+  Servidor y TodoEnUno con selección de rol, o ZIP portable)
 - **Modo «todo en uno»**: el paquete Windows incluye servidor integrado (PostgreSQL 17 + PostGIS +
   Node + API con el catálogo de Villa Clara precargado) que se levanta solo al abrir VIGÍA —
-  ideal para pruebas y máquina de guardia; para la red del unidad, desmarque la tarea
-  «Servidor integrado» en el instalador y apunte los clientes al servidor central.
+  ideal para pruebas y máquina de guardia; para la red del unidad, elija «Solo cliente»
+  al instalar (o en el asistente inicial del programa) y apunte los clientes al servidor central.
   y **navegador** (Flutter Web), ambos contra la misma API y base de datos.
+- **Búsqueda global (Ctrl+K)**: una sola caja que detecta qué es lo escrito —
+  identidad (11 dígitos), teléfono, dirección o texto — y busca a la vez
+  personas (con corrección de tipeo «¿quisiste decir…?», fonética en español
+  que encuentra Judith escrito Yudith, teléfonos y prefijos de carné),
+  direcciones con número y con **nombres antiguos de calles**, y zonas del
+  mapa; sugerencias en vivo con fotografía, grupos por tipo, filtros, y
+  historial con búsquedas fijadas.
 - Hasta **500 000 personas** en dos grupos (A: directorio importado, B: registros
   propios), sin duplicar identidades.
 - Cartografía local generada desde **OpenStreetMap** (extracto Geofabrik de Cuba).

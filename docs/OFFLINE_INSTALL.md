@@ -74,7 +74,8 @@ cambiarse en el primer acceso. No existen contraseñas por defecto.
    instálela como
    «Entidad de certificación raíz de confianza» (Windows: `certutil -addstore Root`,
    o el instalador de LEXAIR GEO con `/CAFILE=`).
-2. **Windows**: ejecute `LexairGeo-X.Y.Z-Setup-x64.exe` (sin Internet) o descomprima el ZIP
+2. **Windows**: ejecute `Vigia-X.Y.Z-TodoEnUno-x64.exe` eligiendo «Solo cliente»
+   (o el instalador `Vigia-X.Y.Z-Cliente-x64.exe`), sin Internet; o descomprima el ZIP
    portable y cree `config.json` junto al ejecutable. Ver [WINDOWS_BUILD.md](WINDOWS_BUILD.md).
 3. **Navegador**: abra `https://geo.internal/`.
 
