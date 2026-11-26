@@ -419,6 +419,23 @@ begin
   end;
 end;
 
+function RtfLinea(const S: string): string;
+var T: string;
+begin
+  T := S;
+  StringChangeEx(T, '\', '\\', True);
+  StringChangeEx(T, '{', '\{', True);
+  StringChangeEx(T, '}', '\}', True);
+  Result := '\bullet  ' + T + '\line ';
+end;
+
+function JsonEscape(const S: string): string;
+begin
+  Result := S;
+  StringChangeEx(Result, '\', '\\', True);
+  StringChangeEx(Result, '"', '\"', True);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var Cfg, Url, CaDest, Term, Datos, Mensaje, I: string;
     N: Integer;
@@ -504,23 +521,6 @@ begin
   end;
 end;
 
-
-function RtfLinea(const S: string): string;
-var T: string;
-begin
-  T := S;
-  StringChangeEx(T, '\', '\\', True);
-  StringChangeEx(T, '{', '\{', True);
-  StringChangeEx(T, '}', '\}', True);
-  Result := '\bullet  ' + T + '\line ';
-end;
-
-function JsonEscape(const S: string): string;
-begin
-  Result := S;
-  StringChangeEx(Result, '\', '\\', True);
-  StringChangeEx(Result, '"', '\"', True);
-end;
 
 
 procedure DeinitializeSetup;
