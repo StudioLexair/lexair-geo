@@ -52,7 +52,8 @@ createdb lexair_prep && psql -d lexair_prep -c 'CREATE EXTENSION postgis'
 osm2pgsql -d lexair_prep -O flex -S scripts/maps/osm2pgsql_lexair.lua --slim --cache 250 \
   --bbox -80.79,21.92,-78.79,23.47 cuba-latest.osm.pbf
 
-# 4. Catálogo geográfico (municipios, localidades, calles, viviendas, POI)
+# 4. Catálogo geográfico (municipios, localidades, calles, viviendas, POI,
+#    alias de nomenclatura antigua de calles: old_name/alt_name de OSM)
 psql -d lexair_prep -f scripts/maps/build_geo_catalog.sql
 scripts/maps/export_geo_catalog.sh "$PREP" $W/cuba-latest.osm.pbf /opt/dl/catalog-vc
 
