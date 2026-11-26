@@ -1,7 +1,8 @@
+/* eslint-disable max-lines -- personal: CRUD + geo + zonas en un módulo */
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { withTransaction } from '../../db/pool.js';
-import { badRequest, forbidden, notFound } from '../../lib/errors.js';
+import { badRequest, notFound } from '../../lib/errors.js';
 import { assertCoordinate, parseBBox } from '../../lib/geo.js';
 import { normalizeText } from '../../lib/text.js';
 import { PaginationQuery } from '../../lib/pagination.js';
@@ -31,7 +32,7 @@ const UpsertPersonnelBase = z.object({
 });
 /** Alta completa: exige algún dato de contexto. En PATCH se valida parcial. */
 export const UpsertPersonnel = UpsertPersonnelBase.refine(
-  (o) => (o.addressText != null || o.municipalityId != null || o.rank != null || o.unit != null),
+  (o) => [o.addressText, o.municipalityId, o.rank, o.unit].some((v) => v !== null && v !== undefined),
   'Indique al menos grado, unidad o dirección de residencia');
 
 const PersonnelLocation = z.object({
@@ -71,7 +72,7 @@ const PERSONNEL_SELECT = `
     LEFT JOIN geo.zones z ON z.id = pe.zone_id`;
 
 export function personnelDto(r: PersonnelRow, exact: boolean) {
-  const hasPoint = r.lat != null && r.lon != null;
+  const hasPoint = r.lat !== null && r.lon !== null;
   return {
     id: r.id,
     code: r.code,
@@ -83,7 +84,7 @@ export function personnelDto(r: PersonnelRow, exact: boolean) {
     addressText: exact ? r.address_text : null,
     municipalityId: r.municipality_id,
     municipality: r.municipality,
-    zone: r.zone_id != null ? { id: r.zone_id, name: r.zone_name } : null,
+    zone: r.zone_id !== null ? { id: r.zone_id, name: r.zone_name } : null,
     roleNote: r.role_note,
     isActive: r.is_active,
     isSynthetic: r.is_synthetic,
@@ -188,7 +189,7 @@ export async function personnelRoutes(app: FastifyInstance): Promise<void> {
   app.post('/personnel', { preHandler: guard('personnel.write') }, async (req, reply) => {
     const user = requireUser(req);
     const b = UpsertPersonnel.parse(req.body);
-    const allowed = await ctx.settings.allowedBBox();
+    await ctx.settings.allowedBBox(); // valida que el recorte configurado exista
     const dup = b.code
       ? await ctx.db.query('SELECT 1 FROM directory.personnel WHERE code = $1', [b.code])
       : { rowCount: 0 };

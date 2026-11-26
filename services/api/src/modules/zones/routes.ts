@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- zonas: CRUD + geo + asignaciones en un módulo */
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { withTransaction } from '../../db/pool.js';
@@ -134,11 +135,11 @@ export function zoneDto(r: ZoneRow) {
     description: r.description,
     kind: r.kind,
     vertices: (r.vertices as Array<{ lat: number; lon: number }> | null) ?? [],
-    center: r.center_lat != null && r.center_lon != null ? { lat: r.center_lat, lon: r.center_lon } : null,
+    center: r.center_lat !== null && r.center_lon !== null ? { lat: r.center_lat, lon: r.center_lon } : null,
     radiusM: r.radius_m,
     label: r.label_text,
     showLabel: r.show_label,
-    category: r.category_id != null
+    category: r.category_id !== null
       ? { id: r.category_id, name: r.category_name, colorHex: r.category_color, icon: r.category_icon }
       : null,
     colorHex: r.color_hex ?? r.category_color ?? '#0F6C81',

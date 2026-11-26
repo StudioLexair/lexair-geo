@@ -35,10 +35,10 @@ export async function importReclusos(
 
   const usedInternCodes = new Set<string>();
   const batchRows = capped.map((r, i) => {
-    let rowNo = i + 1;
+    const rowNo = i + 1;
     const address = composeAddress(r);
     const muniId = r.municipio ? (muniMap.get(normalizeText(r.municipio)) ?? null) : null;
-    if (r.municipio && muniId == null) {
+    if (r.municipio && muniId === null) {
       errors.push({ row: rowNo, message: `municipio sin coincidencia: ${r.municipio}` });
     }
     let internCode: string | null = null;
@@ -68,7 +68,7 @@ export async function importReclusos(
 
   if (opts.dryRun) {
     return { total: rows.length, ok: batchRows.length, inmates: batchRows.filter((r) => r.facility).length,
-      located: batchRows.filter((r) => r.muniId != null).length, errors };
+      located: batchRows.filter((r) => r.muniId !== null).length, errors };
   }
 
   let ok = 0;
@@ -106,8 +106,8 @@ export async function importReclusos(
       );
       const inmates = await c.query(
         `INSERT INTO directory.inmates AS im (person_id, intern_code, facility, status, notes, data_source, created_by)
-         SELECT p.id, x.\"internCode\", nullif(x.\"facility\", ''), 'Internado', x.ingreso, 'reclusos_xml', $2
-           FROM jsonb_to_recordset($1::jsonb) AS x(code text, \"internCode\" text, \"facility\" text, ingreso text)
+         SELECT p.id, x."internCode", nullif(x."facility", ''), 'Internado', x.ingreso, 'reclusos_xml', $2
+           FROM jsonb_to_recordset($1::jsonb) AS x(code text, "internCode" text, "facility" text, ingreso text)
            JOIN directory.persons p ON p.code = x.code
          ON CONFLICT (person_id) DO UPDATE SET intern_code = coalesce(EXCLUDED.intern_code, im.intern_code),
            facility = coalesce(EXCLUDED.facility, im.facility), status = 'Internado',
@@ -120,9 +120,9 @@ export async function importReclusos(
            coord_source, precision_level, address_granularity, validation_status, updated_by)
          SELECT p.id, ST_PointOnSurface(mm.boundary), x.address, mm.id, 'geocoded_address',
                 'general_area', 'municipality', 'pending', $2
-           FROM jsonb_to_recordset($1::jsonb) AS x(code text, address text, \"muniId\" int)
+           FROM jsonb_to_recordset($1::jsonb) AS x(code text, address text, "muniId" int)
            JOIN directory.persons p ON p.code = x.code
-           JOIN geo.municipalities mm ON mm.id = x.\"muniId\" AND mm.boundary IS NOT NULL
+           JOIN geo.municipalities mm ON mm.id = x."muniId" AND mm.boundary IS NOT NULL
          ON CONFLICT (person_id) DO UPDATE SET geom = EXCLUDED.geom, address_text = EXCLUDED.address_text,
            municipality_id = EXCLUDED.municipality_id, coord_source = 'geocoded_address',
            precision_level = 'general_area', address_granularity = 'municipality',

@@ -174,7 +174,7 @@ describe.skipIf(!integrationEnabled)('zonas dibujadas', () => {
   });
 
   describe('personal y pases asociados a la zona', () => {
-    let personId = ''; let inmatePassId = ''; let personnelId = '';
+    let personId = ''; let personnelId = '';
 
     beforeAll(async () => {
       const p = await post(operator, '/api/v1/persons', {
@@ -190,7 +190,7 @@ describe.skipIf(!integrationEnabled)('zonas dibujadas', () => {
         authorizedZoneId: zoneId, facility: 'Penal de prueba',
       });
       expect(pass.statusCode).toBe(201);
-      inmatePassId = pass.json().id;
+      expect(pass.json().id).toBeTruthy();
       const pe = await post(operator, '/api/v1/personnel', {
         fullName: 'Capitán de Prueba Zona', rank: 'Capitán', unit: 'UM-01',
         phone: '+53 500-0000', roleNote: 'Cobertura de área',

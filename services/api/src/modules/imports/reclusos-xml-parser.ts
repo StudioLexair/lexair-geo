@@ -27,25 +27,6 @@ export type ParsedWorkbook = {
 
 type CellLike = { '@_ss:Index'?: string; Data?: string | { '#text': string } };
 
-const HEADER_ALIASES: Record<string, keyof ReclusoRow> = {
-  NIDENTIDAD: 'nidentidad',
-  CI: 'nidentidad',
-  NOMBRE1: 'nombre1',
-  NOMBRE2: 'nombre2',
-  APELLIDO1: 'apellido1',
-  APELLIDO2: 'apellido2',
-  FECINGREAL: 'fecIngresoReal',
-  FECINGRESOREAL: 'fecIngresoReal',
-  UNIDAD: 'unidad',
-  PROVINCIA: 'provincia',
-  MUNICIPIO: 'municipio',
-  CONSEJO: 'consejo',
-  CDR: 'cdr',
-  DIRECCION: 'direccion',
-  'DIRECCIÓN': 'direccion',
-  EXPEDIENTE: 'expediente',
-};
-
 /** Hoja preferida: la que lleva dirección; si no existe, la primera con datos. */
 function pickSheet(sheets: { name: string; rows: Record<string, string>[]; headers: string[] }[]) {
   const withAddr = sheets.find((s) => s.headers.includes('DIRECCION') || s.headers.includes('DIRECCIÓN'));
@@ -54,7 +35,7 @@ function pickSheet(sheets: { name: string; rows: Record<string, string>[]; heade
 
 function cellText(c: CellLike): string {
   const d = c?.Data;
-  if (d == null) return '';
+  if (d === null || d === undefined) return '';
   return typeof d === 'string' ? d : (d['#text'] ?? '');
 }
 
@@ -85,7 +66,7 @@ export function parseReclusosXml(xml: string): ParsedWorkbook {
         // Cada Row agrupa sus celdas bajo la subclave `Cell` (una o varias);
         // el resto de claves es texto en blanco entre etiquetas.
         const r = (row ?? {}) as { Cell?: unknown };
-        const cellList = r.Cell == null ? [] : Array.isArray(r.Cell) ? r.Cell : [r.Cell];
+        const cellList = r.Cell === null || r.Cell === undefined ? [] : Array.isArray(r.Cell) ? r.Cell : [r.Cell];
         rowsRaw.push(cellList as CellLike[]);
       }
     }

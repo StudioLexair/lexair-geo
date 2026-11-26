@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- parseo Oracle por bloques largos */
 import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { DbClient } from '../../db/pool.js';
@@ -57,7 +58,7 @@ function toCode(prefix: string, key: string): string | null {
 }
 
 function textOf(v: unknown, max = 160): string | null {
-  if (v == null) return null;
+  if (v === null || v === undefined) return null;
   const s = String(v).trim();
   return s === '' ? null : s.slice(0, max);
 }
@@ -68,14 +69,14 @@ function phoneOf(v: unknown): string | null {
 }
 
 function dateOf(v: unknown): Date | null {
-  if (v == null) return null;
+  if (v === null || v === undefined) return null;
   if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v;
   const t = Date.parse(String(v));
   return Number.isNaN(t) ? null : new Date(t);
 }
 
 function numOrNull(v: unknown): number | null {
-  const n = typeof v === 'number' ? v : v == null || v === '' ? NaN : Number(v);
+  const n = typeof v === 'number' ? v : v === null || v === undefined || v === '' ? NaN : Number(v);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -131,7 +132,7 @@ async function upsertPersons(
     `INSERT INTO directory.person_memberships (person_id, group_id, source)
      SELECT $1, g, 'import' FROM unnest($2::smallint[]) g
      ON CONFLICT (person_id, group_id) DO NOTHING`, [personId, groupIds]);
-  if (lat != null && lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+  if (lat !== null && lon !== null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
     await c.query(
       `INSERT INTO geo.person_locations
          (person_id, geom, coord_source, precision_level, address_granularity, validation_status)
@@ -187,7 +188,7 @@ async function upsertPersonnel(
   if (!fullName || fullName.length < 3) { counters.skipped += 1; return; }
   const lat = numOrNull(row['__lat']);
   const lon = numOrNull(row['__lon']);
-  const point = lat != null && lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180
+  const point = lat !== null && lon !== null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180
     ? 'ST_SetSRID(ST_MakePoint(' + lon + ', ' + lat + '), 4326)::geography' : null;
   await c.query(
     `INSERT INTO directory.personnel (code, full_name, rank, unit, phone, phone_alt, address_text,
@@ -304,7 +305,7 @@ export async function runConnectorSync(opts: {
   };
   try {
     await withOracle(connOpts, async (conn) => {
-      for (const m of connector.mappings) { // eslint-disable-line max-statements
+      for (const m of connector.mappings) {  
         try {
           await runMapping(conn, db, m, counters, dryRun);
         } catch (e) {

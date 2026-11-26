@@ -7,7 +7,7 @@ import { allowedGroups, guard, requireUser } from '../../plugins/auth.js';
 import { writeAudit } from '../audit/audit-writer.js';
 import { importRows } from './import-service.js';
 import { importReclusos } from './reclusos-service.js';
-import { composeAddress, parseReclusosXml } from './reclusos-xml-parser.js';
+import { parseReclusosXml } from './reclusos-xml-parser.js';
 import { validateCsv } from './csv-validation.js';
 
 const ImportQuery = z.object({

@@ -25,11 +25,9 @@ export type OracleConnection = {
   break?: () => Promise<void>;
 };
 
-let cached: OracleModule | null = null;
 let clientInitAttempted = false;
 
 export function resetDriverCache(): void {
-  cached = null;
   clientInitAttempted = false;
 }
 
@@ -54,7 +52,6 @@ export async function getOracledb(thickMode: boolean): Promise<OracleModule> {
   } catch {
     throw driverMissing();
   }
-  cached = mod;
   if (thickMode && !clientInitAttempted) {
     if (!mod.initOracleClient) throw new AppError(503, 'ORACLE_DRIVER_OLD',
       'El paquete oracledb instalado no soporta modo THICK; actualícelo.');

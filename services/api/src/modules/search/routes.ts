@@ -18,7 +18,7 @@ const BusquedaQuery = z.object({
   q: z.string().trim().min(2).max(120),
   limit: z.coerce.number().int().min(1).max(25).default(8),
   filtro: z.preprocess(
-    (v) => (Array.isArray(v) ? v : v == null ? [] : [v]),
+    (v) => (Array.isArray(v) ? v : v === null || v === undefined ? [] : [v]),
     z.array(z.enum(['con_permiso', 'sin_ubicacion', 'con_telefono'])).max(3),
   ).default([]),
   municipio: z.string().trim().max(120).optional(),
@@ -141,7 +141,7 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
         ORDER BY s DESC
         LIMIT $3`,
       [q, qNorm, limit]);
-    const direcciones = dirsRows.rows.filter((d) => d.lat != null);
+    const direcciones = dirsRows.rows.filter((d) => d.lat !== null);
 
     // --- Zonas (solo con permiso) -------------------------------------------
     let zonas: Array<{ id: string; name: string; lat: number; lon: number }> = [];

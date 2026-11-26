@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { withTransaction } from '../../db/pool.js';
-import { badRequest, forbidden, notFound } from '../../lib/errors.js';
+import { badRequest, notFound } from '../../lib/errors.js';
 import { guard, requireUser } from '../../plugins/auth.js';
 import { writeAudit } from '../audit/audit-writer.js';
 import { decryptSecret, deriveKey, encryptSecret } from './crypto.js';
@@ -150,7 +150,7 @@ export async function oracleRoutes(app: FastifyInstance): Promise<void> {
       thickMode: b.thickMode,
     };
     const result = await withOracle(opts, async (conn) => {
-      let banner: string | null = null;
+      let banner: string | null;
       try {
         const r = await conn.execute('SELECT banner FROM v$version WHERE ROWNUM = 1', [], { outFormat: 4002 });
         banner = String((rowsOf(r)[0] as Record<string, unknown> | undefined)?.['banner'] ?? '') || null;
@@ -175,7 +175,7 @@ export async function oracleRoutes(app: FastifyInstance): Promise<void> {
     const timeoutMs = await ctx.settings.number('oracle.timeout_ms', 30000);
     const started = Date.now();
     const result = await withOracle(await connectorOptions(connector, keyOf(ctx.cfg)), async (conn) => {
-      let banner: string | null = null;
+      let banner: string | null;
       try {
         const b = await conn.execute('SELECT banner FROM v$version WHERE ROWNUM = 1', [], { outFormat: 4002 });
         banner = String((rowsOf(b)[0] as Record<string, unknown> | undefined)?.['banner'] ?? '') || null;

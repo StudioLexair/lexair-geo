@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- pases: ciclo completo en un módulo */
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { withTransaction } from '../../db/pool.js';
@@ -298,7 +299,7 @@ export async function passRoutes(app: FastifyInstance): Promise<void> {
   /** El interno regresa antes de la fecha prevista. */
   app.post('/passes/:id/return', { preHandler: guard('passes.write') }, async (req) => {
     const { id } = IdParams.parse(req.params);
-    const user = requireUser(req);
+    requireUser(req); // exige sesión aunque el cuerpo no la use
     const b = z.object({ returnedAt: z.coerce.date().optional() }).parse(req.body ?? {});
     await withTransaction(ctx.db, async (c) => {
       const res = await c.query(
