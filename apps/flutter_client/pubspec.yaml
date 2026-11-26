@@ -31,6 +31,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/config/
+    - assets/branding/
   # Fuentes empaquetadas (OFL 1.1, ver assets/fonts/OFL.txt): Flutter Web no
   # descarga Roboto ni fuentes de respaldo de fonts.gstatic.com.
   fonts:

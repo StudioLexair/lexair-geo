@@ -188,7 +188,7 @@ class _BrandPanel extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.travel_explore, color: LexairColors.accent, size: 36),
+              Image(image: AssetImage('assets/branding/vigia_logo.png'), width: 48, height: 48),
               SizedBox(width: 12),
               Text(
                 'VIGÍA',
