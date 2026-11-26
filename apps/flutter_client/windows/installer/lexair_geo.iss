@@ -140,13 +140,13 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
-var Cfg, Url, CaDest, Term, Datos: string;
+var Cfg, Url, CaDest, Term, Datos, Mensaje: string;
 begin
   // Versiones anteriores: preguntar si se conservan los datos existentes.
   if CurStep = ssInstall then begin
     Datos := ExpandConstant('{localappdata}\VIGIA\datos');
     if DirExists(Datos) then begin
-      const Mensaje = 'Se ha detectado una instalación anterior con datos guardados.' #13#10#13#10 +
+      Mensaje := 'Se ha detectado una instalación anterior con datos guardados.' #13#10#13#10 +
         '¿Desea CONSERVAR los datos existentes? (Recomendado: conserva la base, ' +
         'las zonas y las ubicaciones marcadas.)' #13#10#13#10 +
         'Elija «No» solo si quiere empezar de cero; en ese caso los datos ' +
