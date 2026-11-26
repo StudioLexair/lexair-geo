@@ -82,7 +82,7 @@ jobs:
           & "$pg\bin\createdb.exe" -h 127.0.0.1 -p 5599 -U lexair postgis_test | Out-Null
           $ver = (& "$pg\bin\psql.exe" -h 127.0.0.1 -p 5599 -U lexair -d postgis_test -tAc "CREATE EXTENSION postgis; SELECT postgis_full_version();") -join ' '
           & "$pg\bin\pg_ctl.exe" -D $test -w -m fast stop | Out-Null
-          if ($ver -notmatch 'POSTGIS-3') { throw "PostGIS no funciona en el paquete: $ver" }
+          if ($ver -notmatch 'POSTGIS="?3') { throw "PostGIS no funciona en el paquete: $ver" }
           Write-Host "PostgreSQL+PostGIS verificados: $ver"
           "$pg" | Out-File -Encoding ascii $env:RUNNER_TEMP\pg-dir.txt
 
