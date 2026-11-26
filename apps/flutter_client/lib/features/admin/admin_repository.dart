@@ -47,4 +47,24 @@ class AdminRepository {
   Future<Json> deleteAddress(int id) => api.deleteJson('/geocoding/addresses/$id');
 
   Future<Json> mapStyles() => api.getJson('/maps/styles');
+
+  // --- Operación de pases: zonas, personal, internos ------------------------
+  Future<List<Json>> zoneCategories() async => itemsOf(await api.getJson('/zones/categories'));
+  Future<Json> createZoneCategory(Json body) => api.postJson('/zones/categories', body);
+  Future<Json> updateZoneCategory(int id, Json body) => api.patchJson('/zones/categories/$id', body);
+
+  Future<List<Json>> passTypes() async => itemsOf(await api.getJson('/passes/types'));
+  Future<Json> createPassType(Json body) => api.postJson('/passes/types', body);
+  Future<Json> updatePassType(int id, Json body) => api.patchJson('/passes/types/$id', body);
+
+  // --- Conectores Oracle 11g -----------------------------------------------
+  Future<List<Json>> oracleConnectors() async => itemsOf(await api.getJson('/oracle/connectors'));
+  Future<Json> createOracleConnector(Json body) => api.postJson('/oracle/connectors', body);
+  Future<Json> updateOracleConnector(String id, Json body) => api.patchJson('/oracle/connectors/$id', body);
+  Future<void> deleteOracleConnector(String id) => api.deleteJson('/oracle/connectors/$id');
+  Future<Json> testOracleConnector(String id) => api.postJson('/oracle/connectors/$id/test', {});
+  Future<Json> runOracleConnector(String id, {bool dryRun = false}) =>
+      api.postJson('/oracle/connectors/$id/run', {'dryRun': dryRun});
+  Future<List<Json>> oracleRuns({String? connectorId}) async =>
+      itemsOf(await api.getJson('/oracle/runs', {'connectorId': connectorId, 'limit': 100}));
 }

@@ -11,7 +11,13 @@ export type SearchFilters = Pagination & {
   status: 'active' | 'inactive' | 'all';
   validation?: string | undefined;
   hasLocation?: 'true' | 'false' | undefined;
+  onPass?: 'true' | 'false' | undefined;
 };
+
+/** Pase activo (vigente, no devuelto ni cancelado) del interno. */
+export const ON_PASS_SQL = `EXISTS (SELECT 1 FROM directory.passes ops
+   WHERE ops.person_id = p.id AND ops.returned_at IS NULL AND ops.cancelled_at IS NULL
+     AND now() >= ops.starts_at AND now() <= ops.ends_at)`;
 
 export const COUNT_CAP = 10_000;
 
@@ -68,6 +74,7 @@ export async function searchPersons(
   if (f.municipalityId) add('l.municipality_id = ?', f.municipalityId);
   if (f.validation) add('l.validation_status = ?', f.validation);
   if (f.hasLocation) where.push(f.hasLocation === 'true' ? 'l.person_id IS NOT NULL' : 'l.person_id IS NULL');
+  if (f.onPass) where.push(f.onPass === 'true' ? ON_PASS_SQL : `NOT ${ON_PASS_SQL}`);
 
   const whereSql = where.join(' AND ');
   const countSql = `${source} SELECT count(*)::int AS total FROM (SELECT 1 ${PERSON_JOINS} ${scoreJoin}

@@ -23,6 +23,28 @@ const SETTING_VALIDATORS: Record<string, z.ZodType> = {
   'security.session_hours': z.number().int().min(1).max(24),
   'security.max_failed_logins': z.number().int().min(3).max(20),
   'geo.allowed_bbox': z.object({ west: z.number(), south: z.number(), east: z.number(), north: z.number() }),
+  // Operación de pases (0011): todo editable desde la administración.
+  'personnel.near_radius_m': z.number().int().min(100).max(200000),
+  'personnel.max_results': z.number().int().min(5).max(500),
+  'passes.default_days': z.number().int().min(1).max(365),
+  'passes.max_active_per_person': z.number().int().min(1).max(20),
+  'passes.marker_icon': z.object({
+    icon: z.string().trim().min(1).max(60),
+    colorHex: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    size: z.number().int().min(10).max(64),
+  }),
+  'personnel.marker_icon': z.object({
+    icon: z.string().trim().min(1).max(60),
+    colorHex: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+    size: z.number().int().min(10).max(64),
+  }),
+  'zones.palette': z.array(z.string().regex(/^#[0-9A-Fa-f]{6}$/)).min(1).max(24),
+  'zones.max_radius_m': z.number().int().min(100).max(200000),
+  'zones.max_results': z.number().int().min(10).max(20000),
+  'inmate.statuses': z.array(z.string().trim().min(1).max(60)).max(24),
+  'inmate.risk_levels': z.array(z.string().trim().min(1).max(40)).max(24),
+  'oracle.row_cap': z.number().int().min(100).max(500000),
+  'oracle.timeout_ms': z.number().int().min(1000).max(300000),
 };
 
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
@@ -44,7 +66,13 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       (SELECT count(*)::int FROM geo.addresses) AS addresses,
       (SELECT count(*)::int FROM geo.municipalities) AS municipalities,
       (SELECT count(*)::int FROM geo.points_of_interest) AS pois,
-      (SELECT count(*)::int FROM directory.import_jobs WHERE created_at > now() - interval '7 days') AS imports_7d`);
+      (SELECT count(*)::int FROM directory.import_jobs WHERE created_at > now() - interval '7 days') AS imports_7d,
+      (SELECT count(*)::int FROM geo.zones WHERE is_active) AS zones_active,
+      (SELECT count(*)::int FROM directory.inmates WHERE is_active) AS inmates_active,
+      (SELECT count(*)::int FROM directory.passes WHERE returned_at IS NULL AND cancelled_at IS NULL
+         AND now() >= starts_at AND now() <= ends_at) AS passes_active,
+      (SELECT count(*)::int FROM directory.personnel WHERE is_active) AS personnel_active,
+      (SELECT count(*)::int FROM directory.oracle_connectors WHERE enabled) AS oracle_connectors`);
     return rows[0];
   });
 

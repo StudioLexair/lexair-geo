@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/util/icon_map.dart';
 import '../../core/util/labels.dart';
 import '../persons/person.dart';
 import 'workspace_controller.dart';
@@ -108,3 +110,105 @@ List<Marker> buildSelectionMarkers(WorkspaceController ws) {
   }
   return out;
 }
+
+
+/// Marcadores de internos CON PASE ACTIVO. El icono, color y tamaño vienen de
+/// la configuración del servidor (`passes.marker_icon`): nada fijado en el
+/// cliente. Al tocarlo se abre la ficha de la persona.
+List<Marker> buildPassMarkers(BuildContext context, WorkspaceController ws) {
+  final style = ws.passMarkerStyle;
+  final icon = iconFromName(style.icon, fallback: Icons.local_police);
+  final color = _hexToColor(style.colorHex) ?? LexairColors.groupB;
+  return [
+    for (final m in ws.passMarkers)
+      Marker(
+        point: LatLng(m.lat, m.lon),
+        width: style.size + 6,
+        height: style.size + 6,
+        alignment: Alignment.topCenter,
+        child: Tooltip(
+          message: '${m.pass.personName ?? ''}\n'
+              'Pase: ${m.pass.passTypeName ?? ''}\n'
+              'Hasta: ${fmtDateIso(m.pass.endsAt)}\n'
+              'Interno: ${m.pass.internCode ?? '—'}',
+          child: GestureDetector(
+            onTap: () => ws.selectById(m.pass.personId),
+            child: Stack(clipBehavior: Clip.none, children: [
+              Icon(icon, size: style.size.toDouble(), color: color,
+                  shadows: const [Shadow(blurRadius: 3, color: Colors.black45)]),
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: LexairColors.ok,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+  ];
+}
+
+/// Marcadores de personal de la fuerza (capa opcional del mapa).
+List<Marker> buildPersonnelMarkers(BuildContext context, WorkspaceController ws) {
+  return [
+    for (final p in ws.personnelMarkers)
+      if (p.hasPoint)
+        Marker(
+          point: LatLng(p.lat!, p.lon!),
+          width: 26,
+          height: 26,
+          child: Tooltip(
+            message: '${p.rank != null ? '${p.rank} ' : ''}${p.fullName}\n'
+                '${p.unit ?? ''}\n${p.phone ?? 'sin teléfono'}',
+            child: GestureDetector(
+              onTap: () => showPersonnelSheet(context, p),
+              child: Icon(iconFromName('shield', fallback: Icons.shield),
+                  size: 24, color: LexairColors.primary,
+                  shadows: const [Shadow(blurRadius: 2, color: Colors.black38)]),
+            ),
+          ),
+        ),
+  ];
+}
+
+/// Ficha rápida del personal al tocar su marcador (teléfonos y unidad).
+Future<void> showPersonnelSheet(BuildContext context, dynamic p) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('${p.rank != null ? '${p.rank} ' : ''}${p.fullName}',
+              style: Theme.of(ctx).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          if (p.code != null) Text('Código: ${p.code}'),
+          if (p.unit != null) Text('Unidad: ${p.unit}'),
+          if (p.phone != null) SelectableText('Teléfono: ${p.phone}'),
+          if (p.phoneAlt != null) SelectableText('Altéfono: ${p.phoneAlt}'),
+          if (p.addressText != null) Text('Residencia: ${p.addressText}'),
+          if (p.roleNote != null) Text('Función: ${p.roleNote}'),
+        ]),
+      ),
+    ),
+  );
+}
+
+Color? _hexToColor(String hex) {
+  if (hex.length == 7 && hex.startsWith('#')) {
+    final v = int.tryParse(hex.substring(1), radix: 16);
+    if (v != null) return Color(0xFF000000 | v);
+  }
+  return null;
+}
+
+String fmtDateIso(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

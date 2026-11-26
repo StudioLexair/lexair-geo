@@ -6,8 +6,11 @@ import '../auth/auth_controller.dart';
 import '../auth/user_profile.dart';
 import 'admin_repository.dart';
 import 'sections/audit_section.dart';
+import 'sections/catalog_sections.dart';
 import 'sections/data_exchange_sections.dart';
 import 'sections/geocoding_admin_sections.dart';
+import 'sections/oracle_section.dart';
+import 'sections/personnel_section.dart';
 import 'sections/overview_sections.dart';
 import 'sections/roles_section.dart';
 import 'sections/settings_section.dart';
@@ -23,7 +26,7 @@ class AdminSectionDef {
   final Widget Function(AdminRepository repo) build;
 }
 
-/// Las 17 secciones del panel. Cada una se muestra solo si el rol tiene
+/// Las 22 secciones del panel. Cada una se muestra solo si el rol tiene
 /// el permiso correspondiente (el servidor lo vuelve a comprobar).
 final List<AdminSectionDef> adminSections = [
   AdminSectionDef('dashboard', 'Resumen', Icons.dashboard_outlined, 'system.status', (r) => DashboardSection(repo: r)),
@@ -42,6 +45,13 @@ final List<AdminSectionDef> adminSections = [
       (r) => SettingsSection(repo: r, title: 'Proximidad y mapa', prefixes: const ['proximity.', 'map.'])),
   AdminSectionDef('settings', 'Configuración general', Icons.settings_outlined, 'settings.manage',
       (r) => SettingsSection(repo: r, title: 'Configuración general', exclude: const ['proximity.', 'map.'])),
+  AdminSectionDef('zonecategories', 'Categorías de zona', Icons.category_outlined, 'zones.write', (r) => ZoneCategoriesSection(repo: r)),
+  AdminSectionDef('passtypes', 'Tipos de pase', Icons.sticky_note_2_outlined, 'passes.write', (r) => PassTypesSection(repo: r)),
+  AdminSectionDef('opsettings', 'Pases, zonas y personal', Icons.tune_outlined, 'settings.manage',
+      (r) => SettingsSection(repo: r, title: 'Pases, zonas y personal',
+          prefixes: const ['passes.', 'zones.', 'personnel.', 'inmate.'])),
+  AdminSectionDef('personnel', 'Personal de la fuerza', Icons.shield_outlined, 'personnel.write', (r) => PersonnelSection(repo: r)),
+  AdminSectionDef('oracle', 'Oracle 11g', Icons.storage_outlined, 'settings.manage', (r) => OracleSection(repo: r)),
   AdminSectionDef('audit', 'Auditoría', Icons.fact_check_outlined, 'audit.read', (r) => AuditSection(repo: r)),
   AdminSectionDef('backups', 'Copias de seguridad', Icons.backup_outlined, 'system.status', (r) => BackupsSection(repo: r)),
   AdminSectionDef('about', 'Licencias y acerca de', Icons.info_outline, null, (_) => const AboutSection()),

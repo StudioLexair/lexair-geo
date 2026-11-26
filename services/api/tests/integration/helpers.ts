@@ -29,7 +29,8 @@ export async function setupHarness(): Promise<Harness> {
   await runMigrations(admin, path.resolve(import.meta.dirname, '../../../../database/migrations'));
   await admin.query(`TRUNCATE directory.person_memberships, geo.person_locations, directory.persons,
     directory.import_jobs, security.sessions, geo.addresses, geo.street_aliases, geo.points_of_interest,
-    geo.localities CASCADE`);
+    geo.localities, geo.zone_members, geo.zones, directory.inmates, directory.passes,
+    directory.personnel, directory.oracle_runs, directory.oracle_connectors CASCADE`);
   await admin.query("DELETE FROM geo.municipalities WHERE source_code = 'test_fixture'");
   await admin.query('ALTER TABLE audit.audit_logs DISABLE TRIGGER audit_logs_append_only');
   await admin.query('TRUNCATE audit.audit_logs');

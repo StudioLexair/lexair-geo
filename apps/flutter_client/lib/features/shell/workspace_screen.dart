@@ -7,6 +7,7 @@ import '../geocoding/address_search_panel.dart';
 import '../map/map_view.dart';
 import '../map/workspace_controller.dart';
 import '../persons/person_search_panel.dart';
+import '../zones/zone_list_panel.dart';
 
 /// Espacio de trabajo GIS: panel de herramientas a la izquierda y mapa.
 class WorkspaceScreen extends StatelessWidget {
@@ -29,6 +30,7 @@ class WorkspaceScreen extends StatelessWidget {
             segments: const [
               ButtonSegment(value: ToolTab.persons, icon: Icon(Icons.people_outline), label: Text('Personas')),
               ButtonSegment(value: ToolTab.addresses, icon: Icon(Icons.signpost_outlined), label: Text('Direcciones')),
+              ButtonSegment(value: ToolTab.zones, icon: Icon(Icons.shape_line_outlined), label: Text('Zonas')),
             ],
             selected: {ws.tab},
             onSelectionChanged: (s) => ws.setTab(s.first),
@@ -39,7 +41,11 @@ class WorkspaceScreen extends StatelessWidget {
             child: (user?.can('persons.read') ?? false)
                 ? IndexedStack(
                     index: ws.tab.index,
-                    children: const [PersonSearchPanel(), AddressSearchPanel()],
+                    children: const [
+                      PersonSearchPanel(),
+                      AddressSearchPanel(),
+                      ZoneListPanel(),
+                    ],
                   )
                 : const Center(child: Text('Su rol no permite consultar personas.')),
           ),

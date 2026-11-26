@@ -27,6 +27,7 @@ class _PersonSearchPanelState extends State<PersonSearchPanel> {
   String? _error;
   bool _loading = false;
   String _status = 'active';
+  String? _onPass; // null: todos · 'true': en pase · 'false': sin pase
 
   @override
   void initState() {
@@ -52,6 +53,7 @@ class _PersonSearchPanelState extends State<PersonSearchPanel> {
         q: _q.text.trim().isEmpty ? null : _q.text.trim(),
         groups: ws.groupFilter == 'all' ? null : ws.groupFilter,
         status: _status,
+        onPass: _onPass,
         page: page,
       );
       if (mounted) setState(() => _result = r);
@@ -102,6 +104,20 @@ class _PersonSearchPanelState extends State<PersonSearchPanel> {
               ],
               onChanged: (v) {
                 setState(() => _status = v ?? 'active');
+                unawaited(_run());
+              },
+            ),
+            DropdownButton<String>(
+              value: _onPass,
+              underline: const SizedBox.shrink(),
+              hint: const Text('Pase'),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Todos')),
+                DropdownMenuItem(value: 'true', child: Text('En pase')),
+                DropdownMenuItem(value: 'false', child: Text('Sin pase')),
+              ],
+              onChanged: (v) {
+                setState(() => _onPass = v);
                 unawaited(_run());
               },
             ),

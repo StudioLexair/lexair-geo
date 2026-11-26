@@ -54,6 +54,8 @@ export const SearchPersonsQuery = PaginationQuery.extend({
   status: z.enum(['active', 'inactive', 'all']).default('active'),
   validation: z.enum(['pending', 'validated', 'rejected']).optional(),
   hasLocation: z.enum(['true', 'false']).optional(),
+  /** true: solo internos con pase activo; false: solo sin pase activo. */
+  onPass: z.enum(['true', 'false']).optional(),
 });
 
 export const NearbyQuery = PaginationQuery.extend({

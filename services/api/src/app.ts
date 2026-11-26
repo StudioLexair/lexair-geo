@@ -13,11 +13,15 @@ import { exportRoutes } from './modules/exports/routes.js';
 import { geocodingRoutes } from './modules/geocoding/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { importRoutes } from './modules/imports/routes.js';
+import { oracleRoutes } from './modules/oracle/routes.js';
+import { passRoutes } from './modules/passes/routes.js';
+import { personnelRoutes } from './modules/personnel/routes.js';
 import { locationRoutes } from './modules/locations/routes.js';
 import { mapRoutes } from './modules/maps/routes.js';
 import { personRoutes } from './modules/persons/routes.js';
 import { searchRoutes } from './modules/search/routes.js';
 import { userRoutes } from './modules/users/routes.js';
+import { zoneRoutes } from './modules/zones/routes.js';
 import type { GroupCode, GroupInfo } from './types.js';
 import './types.js';
 
@@ -75,7 +79,8 @@ export async function buildApp(cfg: AppConfig, db: Db): Promise<FastifyInstance>
 
   await app.register(async (api) => {
     for (const mod of [healthRoutes, authRoutes, personRoutes, locationRoutes, searchRoutes, geocodingRoutes,
-      mapRoutes, adminRoutes, userRoutes, importRoutes, exportRoutes, auditRoutes]) {
+      mapRoutes, zoneRoutes, personnelRoutes, passRoutes, oracleRoutes, adminRoutes, userRoutes,
+      importRoutes, exportRoutes, auditRoutes]) {
       await api.register(mod);
     }
   }, { prefix: '/api/v1' });

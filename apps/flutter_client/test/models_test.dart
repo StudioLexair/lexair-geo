@@ -65,13 +65,13 @@ void main() {
   });
 
   group('Panel de administración', () {
-    test('tiene 17 secciones y un superadmin las ve todas', () {
-      expect(adminSections.length, 17);
+    test('tiene 22 secciones y un superadmin las ve todas', () {
+      expect(adminSections.length, 22);
       final all = UserProfile.fromJson(meJson(role: 'superadmin', permissions: [
         'persons.read', 'users.manage', 'audit.read', 'imports.run', 'exports.run', 'settings.manage',
-        'system.status', 'geocoding.manage',
+        'system.status', 'geocoding.manage', 'zones.write', 'passes.write', 'personnel.write',
       ]));
-      expect(visibleSections(all).length, 17);
+      expect(visibleSections(all).length, 22);
     });
 
     test('un consultor solo ve las secciones permitidas', () {

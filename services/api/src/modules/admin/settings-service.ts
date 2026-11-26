@@ -32,6 +32,18 @@ export class SettingsService {
     return Array.isArray(v) && v.every((n) => typeof n === 'number') ? (v as number[]) : fallback;
   }
 
+  async stringList(key: string, fallback: string[]): Promise<string[]> {
+    const v = (await this.all()).get(key);
+    return Array.isArray(v) && v.every((n) => typeof n === 'string' && n.length > 0)
+      ? (v as string[]) : fallback;
+  }
+
+  /** Objetos JSON como los marcadores (icono/color/tamaño) configurables. */
+  async json<T>(key: string, fallback: T): Promise<T> {
+    const v = (await this.all()).get(key);
+    return v !== null && typeof v === 'object' ? (v as T) : fallback;
+  }
+
   /** Territorio permitido para coordenadas (geo.allowed_bbox). */
   async allowedBBox(): Promise<BBox> {
     const v = (await this.all()).get('geo.allowed_bbox') as Partial<BBox> | undefined;

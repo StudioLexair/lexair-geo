@@ -20,7 +20,8 @@
     "migrate": "node dist/cli/migrate.js",
     "admin:create": "node dist/cli/create-admin.js",
     "seed:synthetic": "node dist/cli/seed-synthetic.js",
-    "perf": "node dist/cli/load-test.js"
+    "perf": "node dist/cli/load-test.js",
+    "seed:ops": "node dist/cli/seed-ops.js"
   },
   "dependencies": {
     "@fastify/jwt": "10.2.9",
@@ -41,5 +42,8 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.74.0",
     "vitest": "5.1.2"
+  },
+  "optionalDependencies": {
+    "oracledb": "6.9.0"
   }
 }

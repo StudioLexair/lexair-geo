@@ -14,14 +14,18 @@ async function main(): Promise<void> {
     'display-name': { type: 'string', default: 'Superadministrador' },
     role: { type: 'string', default: 'superadmin' },
     reset: { type: 'boolean', default: false },
+    // Solo para sistemas aislados donde el operador impone la contraseña
+    // (p. ej. contraseña institucional corta). Queda anotado en la auditoría.
+    'allow-weak': { type: 'boolean', default: false },
   } });
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('Defina DATABASE_URL');
   const username = values.username!.toLowerCase();
   const provided = process.env.LEXAIR_ADMIN_PASSWORD;
-  if (provided) {
+  if (provided && !values['allow-weak']) {
     const pol = checkPasswordPolicy(provided, username);
-    if (!pol.ok) throw new Error(`LEXAIR_ADMIN_PASSWORD no cumple la política: ${pol.reason}`);
+    if (!pol.ok) throw new Error(`LEXAIR_ADMIN_PASSWORD no cumple la política: ${pol.reason}`
+      + ' (use --allow-weak solo en sistemas aislados si la contraseña es institucional)');
   }
   const password = provided ?? generateTemporaryPassword();
   const client = new pg.Client({ connectionString: url });
@@ -53,8 +57,9 @@ async function main(): Promise<void> {
     }
     await client.query(
       `INSERT INTO audit.audit_logs (actor_username, action, entity_type, entity_id, details)
-       VALUES ('installer', $1, 'user', $2, '{}'::jsonb)`,
-      [isReset ? 'user.password_reset' : 'user.create', username],
+       VALUES ('installer', $1, 'user', $2, $3::jsonb)`,
+      [isReset ? 'user.password_reset' : 'user.create', username,
+        JSON.stringify(values['allow-weak'] ? { weakPassword: 'contraseña impuesta por el instalador' } : {})],
     );
     // En un restablecimiento el rol existente no se modifica.
     console.log(JSON.stringify({ created: !isReset, reset: isReset, username,

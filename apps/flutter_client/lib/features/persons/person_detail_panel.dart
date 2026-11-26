@@ -6,6 +6,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/util/labels.dart';
 import '../auth/auth_controller.dart';
 import '../map/workspace_controller.dart';
+import '../passes/passes_section.dart';
+import '../personnel/nearby_personnel_section.dart';
 import 'location_dialog.dart';
 import 'person.dart';
 import 'person_form_dialog.dart';
@@ -121,6 +123,14 @@ class PersonDetailPanel extends StatelessWidget {
               child: Text(p.isActive ? 'Desactivar' : 'Reactivar'),
             ),
         ]),
+        if (can('passes.read')) ...[
+          const Divider(height: 24),
+          PassesSection(person: p),
+        ],
+        if (can('personnel.read') && loc != null) ...[
+          const Divider(height: 24),
+          NearbyPersonnelSection(person: p),
+        ],
         if (can('proximity.query') && loc != null) ...[
           const Divider(height: 24),
           const ProximitySection(),

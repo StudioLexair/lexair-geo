@@ -27,12 +27,13 @@ class PersonsRepository {
     int? municipalityId,
     String status = 'active',
     String? validation,
+    String? onPass,
     int page = 1,
     int pageSize = 50,
   }) async {
     final j = await _api.getJson('/persons', {
       'q': q, 'groups': groups, 'municipalityId': municipalityId, 'status': status,
-      'validation': validation, 'page': page, 'pageSize': pageSize,
+      'validation': validation, 'onPass': onPass, 'page': page, 'pageSize': pageSize,
     });
     return PageResult.fromJson(j, Person.fromJson);
   }

@@ -12,7 +12,10 @@ import 'features/auth/login_screen.dart';
 import 'features/geocoding/geocoding_repository.dart';
 import 'features/map/map_repository.dart';
 import 'features/map/workspace_controller.dart';
+import 'features/passes/passes_repository.dart';
+import 'features/personnel/personnel_repository.dart';
 import 'features/persons/persons_repository.dart';
+import 'features/zones/zones_repository.dart';
 import 'features/shell/app_shell.dart';
 
 /// Raíz de la aplicación: inyecta servicios y decide la pantalla según el
@@ -62,6 +65,9 @@ class _Root extends StatelessWidget {
           maps: MapRepository(api),
           persons: PersonsRepository(api),
           geocoding: GeocodingRepository(api),
+          zones: ZonesRepository(api),
+          personnel: PersonnelRepository(api),
+          passes: PassesRepository(api),
         ),
         child: const AppShell(),
       ),

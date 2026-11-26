@@ -24,6 +24,10 @@ const EnvSchema = z.object({
   APP_VERSION: z.string().default('0.1.0'),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(30).max(100000).default(600),
   LOGIN_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(3).max(100000).default(10),
+  // Oracle: clave de cifrado de contraseñas de conectores y ruta del Instant
+  // Client (necesario para el modo THICK con Oracle 11g). Ambas opcionales.
+  ORACLE_ENCRYPTION_KEY: z.string().min(32).optional(),
+  ORACLE_INSTANT_CLIENT: z.string().optional(),
 });
 
 export type AppConfig = {
@@ -43,6 +47,8 @@ export type AppConfig = {
   appVersion: string;
   rateLimitPerMinute: number;
   loginRateLimitPerMinute: number;
+  oracleEncryptionKey: string | undefined;
+  oracleInstantClient: string | undefined;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -69,5 +75,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     appVersion: e.APP_VERSION,
     rateLimitPerMinute: e.RATE_LIMIT_PER_MINUTE,
     loginRateLimitPerMinute: e.LOGIN_RATE_LIMIT_PER_MINUTE,
+    oracleEncryptionKey: e.ORACLE_ENCRYPTION_KEY,
+    oracleInstantClient: e.ORACLE_INSTANT_CLIENT,
   };
 }

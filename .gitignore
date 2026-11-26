@@ -38,3 +38,6 @@ backups/
 
 # Registros
 *.log
+
+# Python
+__pycache__/
