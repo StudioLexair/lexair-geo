@@ -33,6 +33,9 @@ try {
   $body = @{ username='ci-operator'; password='Temporary-CI-8192'; clientKind='windows' } | ConvertTo-Json
   $auth = Invoke-RestMethod -Method Post -ContentType 'application/json' -Body $body 'http://127.0.0.1:3000/api/v1/auth/login'
   if (-not $auth.token) { throw 'El acceso de CI no devolvió un token' }
+  # La cuenta temporal debe cambiar su contraseña antes de consultar mapas.
+  $change = @{ currentPassword='Temporary-CI-8192'; newPassword='Changed-CI-4769' } | ConvertTo-Json
+  Invoke-RestMethod -Method Post -ContentType 'application/json' -Headers @{Authorization="Bearer $($auth.token)"} -Body $change 'http://127.0.0.1:3000/api/v1/auth/change-password' | Out-Null
   $styles = Invoke-RestMethod -Headers @{Authorization="Bearer $($auth.token)"} 'http://127.0.0.1:3000/api/v1/maps/styles'
   if (-not $styles.installed -or $styles.isSynthetic -ne $false -or $styles.styles.Count -ne 3) { throw 'El mapa real no se anunció correctamente' }
   $tile = Invoke-WebRequest 'http://127.0.0.1:3000/tiles/standard/10/284/446.png' -OutFile (Join-Path $env:RUNNER_TEMP 'vigia-ci-mapa.png') -PassThru
