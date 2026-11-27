@@ -12,6 +12,11 @@ on:
         description: 'Compilar solo el instalador de servidor para diagnóstico (no publicar)'
         type: boolean
         default: false
+      mapa_run:
+        description: 'Solo diagnóstico: ID de una ejecución con paquete cartográfico completo (opcional)'
+        type: string
+        required: false
+        default: ''
   workflow_call:
     inputs:
       version:
@@ -20,15 +25,18 @@ on:
         default: ''
 permissions:
   contents: read
+  actions: read
 
 jobs:
   mapa:
+    if: ${{ !(inputs.diagnostico && inputs.mapa_run) }}
     uses: ./.github/workflows/build-map.yml
     with:
       maxzoom: '16'
 
   windows:
     needs: mapa
+    if: ${{ !cancelled() && (needs.mapa.result == 'success' || (inputs.diagnostico && inputs.mapa_run && needs.mapa.result == 'skipped')) }}
     runs-on: windows-2025
     defaults:
       run:
@@ -126,9 +134,20 @@ jobs:
           "$pg" | Out-File -Encoding ascii $env:RUNNER_TEMP\pg-dir.txt
 
       - name: Descargar cartografía generada en esta ejecución
+        if: ${{ !inputs.mapa_run || !inputs.diagnostico }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: paquete-cartografico-${{ github.run_number }}
+          path: ${{ runner.temp }}/paquete-cartografico
+
+      - name: Recuperar cartografía completa para diagnóstico
+        if: ${{ inputs.diagnostico && inputs.mapa_run }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: paquete-cartografico-*
+          merge-multiple: true
+          run-id: ${{ inputs.mapa_run }}
+          github-token: ${{ github.token }}
           path: ${{ runner.temp }}/paquete-cartografico
 
       - name: Montar paquete del servidor integrado
