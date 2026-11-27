@@ -92,7 +92,7 @@ jobs:
           New-Item -ItemType Directory -Force $msys | Out-Null
           foreach ($dep in $deps) {
             $archive = Join-Path $tmp $dep.File
-            Invoke-WebRequest "https://mirror.msys2.org/mingw/mingw64/$($dep.File)" -OutFile $archive
+            Invoke-WebRequest "https://repo.msys2.org/mingw/mingw64/$($dep.File)" -OutFile $archive
             if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() -ne $dep.Hash) { throw "SHA incorrecto: $($dep.File)" }
             tar.exe -xf $archive -C $msys
             if ($LASTEXITCODE -ne 0) { throw "No se pudo extraer $($dep.File)" }
