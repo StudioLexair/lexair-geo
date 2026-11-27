@@ -92,6 +92,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
     setState(() {
       _msgs.add(_Msg.bot(texto));
       _escribiendo = false;
+      _ocupado = false; // deja ver los botones de respuesta
     });
     _bajar();
   }
@@ -132,14 +133,20 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
     if (mounted) setState(() {});
   }
 
-  // --- Paso 2 · modo -------------------------------------------------------
-  Future<void> _elegirModo(bool local) async {
-    _yo(local ? 'Modo de prueba (todo local)' : 'Modo de red');
+  // --- Paso 2 · modo (servidor de red · prueba local · cliente) ------------
+  Future<void> _elegirModo(bool local, String etiqueta) async {
+    _yo(etiqueta);
     _paso = 2;
     if (local) {
-      await _bot('Bien: base de datos y servidor van dentro del programa. '
-          'La primera preparación tarda uno o dos minutos; las siguientes '
-          'veces abre rápido.');
+      if (etiqueta.startsWith('Servidor')) {
+        await _bot('Perfecto: este equipo guardará los datos y atenderá a los '
+            'demás. Base de datos y servidor van dentro del programa y los '
+            'otros equipos entran como clientes a http://IP-de-este-equipo:3000.');
+      } else {
+        await _bot('Bien: base de datos y servidor van dentro del programa, '
+            'sin red. La primera preparación tarda uno o dos minutos; las '
+            'siguientes veces abre rápido.');
+      }
       await _bot('¿Dejamos la cuenta inicial por defecto o la personalizas?',
           espera: const Duration(milliseconds: 400));
       if (mounted) setState(() {});
@@ -233,15 +240,18 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
                   ),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _ocupado
-                          ? null
-                          : () async {
-                              await widget.onFlag();
-                              widget.onDecision(const DecisionSaltar());
-                            },
-                      child: const Text('Saltar asistente',
-                          style: TextStyle(color: Colors.white60, fontSize: 12.5)),
+                    child: OutlinedButton.icon(
+                      key: const Key('saltar-asistente'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white38),
+                      ),
+                      onPressed: () async {
+                        await widget.onFlag();
+                        widget.onDecision(const DecisionSaltar());
+                      },
+                      icon: const Icon(Icons.skip_next, size: 16),
+                      label: const Text('Saltar asistente'),
                     ),
                   ),
                 ],
@@ -338,30 +348,39 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
 
   Widget _dosModos() {
     return Padding(
-      padding: const EdgeInsets.all(14),
-      child: Row(children: [
-        Expanded(
-          child: _tarjetaModo(
-            icono: Icons.computer,
-            titulo: 'Modo de prueba',
-            subtitulo: 'Todo local',
-            texto: 'Base de datos y servidor incluidos en el programa. '
-                'Nada que configurar; ideal para probar y para el día a día '
-                'en un equipo.',
-            onTap: () => _elegirModo(true),
+      padding: const EdgeInsets.all(12),
+      child: Column(children: [
+        Row(children: [
+          Expanded(
+            child: _tarjetaModo(
+              icono: Icons.lan_outlined,
+              titulo: 'Servidor de red',
+              subtitulo: 'Este equipo atiende a los demás',
+              texto: 'Guarda la base de datos aquí y los otros equipos '
+                  'entran como clientes. Para el servidor del unidad.',
+              onTap: () => _elegirModo(true, 'Servidor de red'),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _tarjetaModo(
-            icono: Icons.lan,
-            titulo: 'Modo de red',
-            subtitulo: 'Servidor y base externos',
-            texto: 'Conecta al servidor y a la base de datos de tu '
-                'organización. Se configura por campos y se puede cambiar '
-                'cuando quieras.',
-            onTap: () => _elegirModo(false),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _tarjetaModo(
+              icono: Icons.computer_outlined,
+              titulo: 'Prueba local',
+              subtitulo: 'Todo en este equipo',
+              texto: 'Base de datos y servidor incluidos, sin red. Ideal '
+                  'para probar o trabajar solo.',
+              onTap: () => _elegirModo(true, 'Prueba local (todo local)'),
+            ),
           ),
+        ]),
+        const SizedBox(height: 10),
+        _tarjetaModo(
+          icono: Icons.devices_outlined,
+          titulo: 'Solo cliente',
+          subtitulo: 'Se conecta a otro equipo',
+          texto: 'Este equipo no guarda datos: se conecta al servidor de la '
+              'red. Después se puede cambiar.',
+          onTap: () => _elegirModo(false, 'Solo cliente'),
         ),
       ]),
     );

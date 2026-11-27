@@ -10,6 +10,7 @@ class LexairColors {
   static const sidebarActive = Color(0xFF1E4A5F);
   static const primary = Color(0xFF0F6C81);
   static const accent = Color(0xFFC07A3A);
+  static const barra = Color(0xFF0F2E21); // verde oscuro de la barra de título
   static const border = Color(0xFFDDE2E7);
   static const groupA = Color(0xFF1565C0);
   static const groupB = Color(0xFFC62828);

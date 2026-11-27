@@ -419,16 +419,6 @@ begin
   end;
 end;
 
-function RtfLinea(const S: string): string;
-var T: string;
-begin
-  T := S;
-  StringChangeEx(T, '\', '\\', True);
-  StringChangeEx(T, '{', '\{', True);
-  StringChangeEx(T, '}', '\}', True);
-  Result := '\bullet  ' + T + '\line ';
-end;
-
 function JsonEscape(const S: string): string;
 begin
   Result := S;
@@ -493,25 +483,24 @@ begin
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
-var RTF, Linea, Url: string;
+var Txt, Url: string;
 begin
   if CurPageID = wpFinished then begin
     Url := Trim(ServerPage.Values[0]);
-    RTF := '{\rtf1\ansi\deff0{\fonttbl{\f0\fnil Segoe UI;}}\fs16\b Resumen de la instalación\b0\line ';
-    RTF := RTF + RtfLinea('Programa VIGÍA ' + '{#AppVersion}' + ' instalado en: ' + ExpandConstant('{app}'));
+    Txt := 'Resumen de la instalación:' #13#10 +
+      '· Programa VIGÍA {#AppVersion} instalado en: ' + ExpandConstant('{app}') + #13#10;
     if InstalarServidor then begin
-      RTF := RTF + RtfLinea('Servidor integrado instalado (base de datos y API en este equipo)');
+      Txt := Txt + '· Servidor integrado instalado (base de datos y API en este equipo)' #13#10;
       if Rol = 'red' then
-        RTF := RTF + RtfLinea('Modo: servidor de red (puerto 3000 abierto para los demás equipos)')
+        Txt := Txt + '· Modo: servidor de red (puerto 3000 abierto para los demás equipos)' #13#10
       else
-        RTF := RTF + RtfLinea('Modo: prueba local (todo en este equipo, sin red)');
+        Txt := Txt + '· Modo: prueba local (todo en este equipo, sin red)' #13#10;
     end else
-      RTF := RTF + RtfLinea('Modo: solo cliente, conecta a: ' + Url);
-    RTF := RTF + RtfLinea('Servidor: ' + Url);
-    RTF := RTF + RtfLinea('Primeros pasos: abra VIGÍA y siga el asistente inicial');
-    RTF := RTF + RtfLinea('Si Windows SmartScreen avisa: «Más información» → «Ejecutar de todas formas» (ver LEEME)');
-    RTF := RTF + '}';
-    WizardForm.FinishedLabel.RTFText := RTF;
+      Txt := Txt + '· Modo: solo cliente, conecta al servidor indicado a continuación' #13#10;
+    Txt := Txt + '· Servidor: ' + Url + #13#10 +
+      '· Primeros pasos: abra VIGÍA y siga el asistente inicial' #13#10 +
+      '· Si Windows SmartScreen avisa: «Más información» → «Ejecutar de todas formas» (ver LEEME)';
+    WizardForm.FinishedLabel.Caption := Txt;
     if not FijoFinal then begin
       WizardForm.FinishedLabel.Height := WizardForm.FinishedLabel.Height + ScaleY(64);
       WizardForm.RunList.Top := WizardForm.RunList.Top + ScaleY(64);

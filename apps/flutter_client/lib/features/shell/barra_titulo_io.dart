@@ -47,15 +47,16 @@ class _BarraTituloState extends State<BarraTitulo> with WindowListener {
   Widget build(BuildContext context) {
     return Container(
       height: 44,
-      color: LexairColors.sidebar,
+      color: LexairColors.barra,
       child: DragToMoveArea(
         child: Row(children: [
           const SizedBox(width: 10),
           Image.asset('assets/branding/vigia_logo.png', width: 26, height: 26),
           const SizedBox(width: 10),
-          Text('${T.orgNombre} · Lexair Geo',
+          Text("${T.orgNombre.isEmpty ? 'VIGÍA' : T.orgNombre} · Lexair Geo",
               style: const TextStyle(
-                  color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4)),
           if (widget.badge != null) ...[
             const SizedBox(width: 10),
             Container(

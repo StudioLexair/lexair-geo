@@ -9,37 +9,37 @@ Future<void> inicializarVentana() async {
   if (!Platform.isWindows) return;
   await windowManager.ensureInitialized();
 
-  // Restaura el tamaño y la posición de la última sesión (si hay guardados).
-  var porDefecto = true;
+  // Geometría guardada de la última sesión: se aplica DENTRO del callback de
+  // ventana lista (aplicarla antes deja un resto de barra nativa encima).
+  Rect? guardada;
   try {
     final prefs = await SharedPreferences.getInstance();
     final crudo = prefs.getString('lexair.ventana');
     if (crudo != null) {
       final g = (jsonDecode(crudo) as List<dynamic>).cast<num>();
       if (g.length == 4 && g[2] >= 900 && g[3] >= 500) {
-        await windowManager.setBounds(Rect.fromLTWH(g[0].toDouble(), g[1].toDouble(),
-            g[2].toDouble(), g[3].toDouble()), size: const Size(1024, 640));
-        porDefecto = false;
+        guardada = Rect.fromLTWH(
+            g[0].toDouble(), g[1].toDouble(), g[2].toDouble(), g[3].toDouble());
       }
     }
   } catch (_) {
     // Sin preferencias válidas: se usa la geometría por defecto.
   }
 
-  const opcionesPorDefecto = WindowOptions(
+  const opciones = WindowOptions(
     size: Size(1280, 800),
     minimumSize: Size(1024, 640),
     title: 'VIGÍA · Lexair Geo',
     titleBarStyle: TitleBarStyle.hidden,
   );
-  const opcionesRestauradas = WindowOptions(
-    minimumSize: Size(1024, 640),
-    title: 'VIGÍA · Lexair Geo',
-    titleBarStyle: TitleBarStyle.hidden,
-  );
 
-  await windowManager.waitUntilReadyToShow(
-      porDefecto ? opcionesPorDefecto : opcionesRestauradas, () async {
+  await windowManager.waitUntilReadyToShow(opciones, () async {
+    if (guardada != null) {
+      try {
+        await windowManager.setBounds(guardada,
+            size: Size(guardada.width, guardada.height));
+      } catch (_) {}
+    }
     await VentanaGuardada.registrar();
     await windowManager.show();
     await windowManager.focus();
