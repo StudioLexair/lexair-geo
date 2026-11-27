@@ -18,6 +18,7 @@ import { passRoutes } from './modules/passes/routes.js';
 import { personnelRoutes } from './modules/personnel/routes.js';
 import { locationRoutes } from './modules/locations/routes.js';
 import { mapRoutes } from './modules/maps/routes.js';
+import { tileProxy } from './modules/maps/tile-proxy.js';
 import { personRoutes } from './modules/persons/routes.js';
 import { searchRoutes } from './modules/search/routes.js';
 import { userRoutes } from './modules/users/routes.js';
@@ -80,6 +81,8 @@ app.addContentTypeParser(['application/xml', 'text/xml'], { parseAs: 'string', b
   });
 
   app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: 'NOT_FOUND', message: 'Ruta inexistente' }));
+
+  await app.register(tileProxy);
 
   await app.register(async (api) => {
     for (const mod of [healthRoutes, authRoutes, personRoutes, locationRoutes, searchRoutes, geocodingRoutes,

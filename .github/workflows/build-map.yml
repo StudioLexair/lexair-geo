@@ -56,8 +56,8 @@ jobs:
       - name: Descarga del extracto de Cuba (Geofabrik, más reciente)
         working-directory: /tmp
         run: |
-          curl -fO https://download.geofabrik.de/central-america/cuba-latest.osm.pbf
-          curl -fO https://download.geofabrik.de/central-america/cuba-latest.osm.pbf.md5
+          curl -4 -fL --retry 8 --retry-delay 15 --retry-all-errors -O https://download.geofabrik.de/central-america/cuba-latest.osm.pbf
+          curl -4 -fL --retry 8 --retry-delay 15 --retry-all-errors -O https://download.geofabrik.de/central-america/cuba-latest.osm.pbf.md5
           md5sum -c cuba-latest.osm.pbf.md5
 
       - name: Importa Villa Clara al almacén de preparación

@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { MBTiles, tileIntersects, validTileCoords } from './mbtiles.mjs';
 import { encodePng, hexToRgb } from './png.mjs';
 
@@ -93,7 +94,7 @@ export function createTileServer(mapDir) {
   return server;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const mapDir = process.env.MAP_DIR ?? '/srv/lexair-geo/maps/current';
   const port = Number(process.env.PORT ?? 8081);
   const host = process.env.HOST ?? '0.0.0.0';
