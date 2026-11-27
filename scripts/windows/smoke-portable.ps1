@@ -8,8 +8,10 @@ $app = Join-Path $root 'lexair_geo.exe'
 if (-not (Test-Path (Join-Path $root 'servidor\mapa\manifest.json'))) { throw 'Portable sin mapa' }
 $oldLocal = $env:LOCALAPPDATA
 $oldRoaming = $env:APPDATA
-$env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'vigia-portable-local'
-$env:APPDATA = Join-Path $env:RUNNER_TEMP 'vigia-portable-roaming'
+# initdb necesita poder ajustar la ACL: usar el perfil local del runner,
+# no D:\a\_temp, que puede negar el cambio de permisos.
+$env:LOCALAPPDATA = Join-Path $oldLocal 'vigia-portable-ci'
+$env:APPDATA = Join-Path $oldRoaming 'vigia-portable-ci'
 $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($app)
 foreach ($base in @($env:LOCALAPPDATA, $env:APPDATA, $oldLocal, $oldRoaming)) {
   $prefs = Join-Path (Join-Path $base $vi.CompanyName) $vi.ProductName
