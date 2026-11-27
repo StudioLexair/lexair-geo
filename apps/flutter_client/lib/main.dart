@@ -8,7 +8,7 @@ import 'features/bootstrap/bootstrap_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Ventana de escritorio con barra propia (sin barra de título nativa).
+  // Ventana de escritorio con barra nativa.
   await inicializarVentana();
   // Terminología editable desde terminologia.json (valores por defecto si no existe).
   await Terminologia.I.load();

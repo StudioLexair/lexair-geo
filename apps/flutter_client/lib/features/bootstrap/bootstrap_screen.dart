@@ -10,7 +10,6 @@ import '../../core/theme/app_theme.dart';
 import '../../app.dart';
 import '../../core/app_services.dart';
 import 'asistente_screen.dart';
-import '../shell/barra_titulo.dart' as barra;
 
 /// Pantalla de arranque del «todo en uno»: levanta el servidor integrado
 /// (base de datos + API) antes de mostrar la pantalla de acceso. Solo aparece
@@ -244,8 +243,7 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
 }
 
 /// Raíz: decide entre el asistente de primera configuración, la pantalla de
-/// arranque del servidor integrado y la aplicación normal. Añade la barra de
-/// título propia cuando la ventana no la trae del sistema.
+/// arranque del servidor integrado y la aplicación normal.
 class VigiaRoot extends StatefulWidget {
   const VigiaRoot({
     super.key,
@@ -272,11 +270,6 @@ class _VigiaRootState extends State<VigiaRoot> {
       url == 'https://geo.internal' ||
       url.startsWith('http://127.0.0.1') ||
       url.startsWith('http://localhost');
-
-  String _badge() {
-    if (widget.plan == null) return 'Red interna';
-    return _esLocalOFabrica(_config.serverUrl) ? 'Prueba local' : 'Red interna';
-  }
 
   @override
   void initState() {
@@ -363,7 +356,16 @@ class _VigiaRootState extends State<VigiaRoot> {
     } else {
       contenido = LexairApp(services: _services);
     }
-    final bar = barra.crearBarraTitulo(_asistente ? null : _badge());
-    return Column(children: [bar, Expanded(child: contenido)]);
+    // Las pantallas anteriores al acceso necesitan su propio MaterialApp:
+    // aporta Overlay, Navigator, tema y soporte correcto para campos de texto.
+    if (_asistente || _bootstrap) {
+      return MaterialApp(
+        title: 'VIGÍA · Lexair Geo',
+        debugShowCheckedModeBanner: false,
+        theme: buildLexairTheme(),
+        home: contenido,
+      );
+    }
+    return contenido;
   }
 }

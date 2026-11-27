@@ -29,7 +29,11 @@ jobs:
           cache: true
       - run: flutter pub get --enforce-lockfile
       - name: flutter build web
-        run: flutter build web --release --no-web-resources-cdn --no-source-maps --no-wasm-dry-run
+        run: |
+          ver=$(sed -nE 's/^version:[[:space:]]*([^+[:space:]]+).*/\1/p' pubspec.yaml)
+          test -n "$ver"
+          if [ -n '${{ inputs.version }}' ] && [ '${{ inputs.version }}' != "$ver" ]; then echo 'La versión de release no coincide con pubspec.yaml'; exit 1; fi
+          flutter build web --release --no-web-resources-cdn --no-source-maps --no-wasm-dry-run --dart-define=APP_VERSION="$ver"
       - name: Comprobar que no hay URLs externas en tiempo de ejecución
         run: bash ../../scripts/build/check_no_external_urls.sh build/web
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

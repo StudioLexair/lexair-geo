@@ -214,6 +214,9 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
     'PGUSER': _dbUser,
     'PGDATABASE': _dbName,
     'PGCLIENTENCODING': 'UTF8',
+    // El proceso de PostgreSQL debe encontrar sus DLL sin depender del PATH
+    // de la máquina o del usuario que inició la aplicación.
+    'PATH': '${plan.pgBin};${Platform.environment['PATH'] ?? ''}',
   };
 
   try {
@@ -271,7 +274,8 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
     log('Aplicando esquema y migraciones…');
     final mig = _run(plan.nodeExe, ['api/dist/cli/migrate.js'],
         workingDirectory: plan.baseDir,
-        env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret, 'NODE_ENV': 'production'});
+        env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
+          'MIGRATIONS_DIR': '${plan.baseDir}\\sql\\migrations', 'NODE_ENV': 'production'});
     if (mig.exitCode != 0) throw Exception('Migraciones fallaron: ${_tail(mig)}');
     paso('esquema', 'listo');
 
@@ -357,8 +361,8 @@ ProcessResult _run(String exe, List<String> args,
   return Process.runSync(exe, args,
       workingDirectory: workingDirectory,
       environment: env,
-      stdoutEncoding: utf8,
-      stderrEncoding: utf8,
+      stdoutEncoding: const Utf8Codec(allowMalformed: true),
+      stderrEncoding: const Utf8Codec(allowMalformed: true),
       runInShell: false);
 }
 

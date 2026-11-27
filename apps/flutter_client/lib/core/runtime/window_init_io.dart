@@ -9,8 +9,7 @@ Future<void> inicializarVentana() async {
   if (!Platform.isWindows) return;
   await windowManager.ensureInitialized();
 
-  // Geometría guardada de la última sesión: se aplica DENTRO del callback de
-  // ventana lista (aplicarla antes deja un resto de barra nativa encima).
+  // Restaurar geometría cuando la ventana nativa esté lista.
   Rect? guardada;
   try {
     final prefs = await SharedPreferences.getInstance();
@@ -30,7 +29,7 @@ Future<void> inicializarVentana() async {
     size: Size(1280, 800),
     minimumSize: Size(1024, 640),
     title: 'VIGÍA · Lexair Geo',
-    titleBarStyle: TitleBarStyle.hidden,
+    titleBarStyle: TitleBarStyle.normal,
   );
 
   await windowManager.waitUntilReadyToShow(opciones, () async {

@@ -31,7 +31,12 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get --enforce-lockfile
-      - run: flutter build windows --release
+      - name: Compilar cliente con la versión del proyecto
+        run: |
+          $ver = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([^+\s]+)').Matches[0].Groups[1].Value
+          if ('${{ inputs.version }}' -and '${{ inputs.version }}' -ne $ver) { throw 'La versión de release no coincide con pubspec.yaml' }
+          flutter build windows --release "--dart-define=APP_VERSION=$ver"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -109,6 +114,7 @@ jobs:
           Copy-Item 'services\api\dist' "$srv\api\dist" -Recurse
           Copy-Item 'services\api\node_modules' "$srv\api\node_modules" -Recurse
           Copy-Item 'services\api\package.json','services\api\package-lock.json' "$srv\api\"
+          Copy-Item 'database\migrations' "$srv\sql\migrations" -Recurse
           Copy-Item 'datos\catalogo_vc\cargar_catalogo.sql' "$srv\sql\cargar_catalogo.sql"
           Copy-Item 'apps\flutter_client\windows\servidor\LEEME.txt' "$srv\LEEME.txt"
           Copy-Item 'apps\flutter_client\windows\servidor\terminologia.ejemplo.json' "$srv\terminologia.ejemplo.json"
@@ -160,6 +166,18 @@ jobs:
           iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DOutDir=$PWD\..\..\out" "/DModo=cliente" "/DManifiestoFile=$(Join-Path $man 'cliente\manifiesto.txt')" windows\installer\lexair_geo.iss
           iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DServidorDir=$rel\servidor" "/DOutDir=$PWD\..\..\out" "/DModo=servidor" "/DManifiestoFile=$(Join-Path $man 'servidor\manifiesto.txt')" windows\installer\lexair_geo.iss
           iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DServidorDir=$rel\servidor" "/DOutDir=$PWD\..\..\out" "/DModo=todo" "/DManifiestoFile=$(Join-Path $man 'todo\manifiesto.txt')" windows\installer\lexair_geo.iss
+
+      - name: Prueba del instalador, arranque y acceso (Windows)
+        working-directory: ${{ github.workspace }}
+        run: ./scripts/windows/smoke-install.ps1
+      - name: Guardar captura de diagnóstico si está disponible
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: vigia-pantalla-windows
+          path: ${{ runner.temp }}/vigia-ci-pantalla.png
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Sumas SHA-256
         working-directory: out

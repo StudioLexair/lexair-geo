@@ -17,7 +17,9 @@ class AppConfig {
   /// Procedencia del valor efectivo (para diagnóstico en «Estado»).
   final String source;
 
-  static const String appVersion = '0.6.0';
+  static const String appVersion = String.fromEnvironment(
+    'APP_VERSION', defaultValue: 'desarrollo',
+  );
 
   String get apiBase => '${_trimSlash(serverUrl)}/api/v1';
   String get tilesBase => '${_trimSlash(serverUrl)}/tiles';

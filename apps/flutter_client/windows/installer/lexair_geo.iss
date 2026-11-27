@@ -63,6 +63,11 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 PrivilegesRequired=admin
 WizardStyle=modern
+DisableWelcomePage=no
+WizardBackColor=white
+WizardBackImageFile=fondo.bmp
+WizardBackImageOpacity=110
+WizardImageFile=
 WizardResizable=no
 SetupIconFile=..\runner\resources\app_icon.ico
 WizardSmallImageFile=wizard_logo.png
@@ -95,7 +100,6 @@ Source: "{#ServidorDir}\*"; DestDir: "{app}\servidor"; Flags: ignoreversion recu
 Source: "{#ManifiestoFile}"; DestDir: "{tmp}"; Flags: deleteafterinstall dontcopy
 ; Música y fondo del asistente
 Source: "musica.wav"; DestDir: "{tmp}"; Flags: deleteafterinstall dontcopy
-Source: "fondo.bmp"; DestDir: "{tmp}"; Flags: deleteafterinstall dontcopy
 ; Guía rápida (SmartScreen, requisitos, modos, instalación silenciosa)
 Source: "LEEME-VIGIA.txt"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -129,7 +133,6 @@ var
   Rol: string;              // red · local · cliente
   MusicaSonando: Boolean;
   BotonMusica: TNewButton;
-  FondoBienvenida, FondoFinal: TBitmapImage;
   NuevosN, CambiadosN, ObsoletosN: Integer;
   ObsoletosLista: TStringList;
   FijoFinal: Boolean;
@@ -153,78 +156,40 @@ end;
 // ---------------------------------------------------------------------------
 // Música del asistente (MCI, en bucle) con botón de silencio
 // ---------------------------------------------------------------------------
-procedure MciSendStringW(Cmd: string; Buf: string; Size: Integer; Hwnd: Integer);
-  external 'mciSendStringW@winmm.dll stdcall delayload';
+// PlaySound soporta WAV asíncrono y repetición. Si falla, la interfaz no
+// afirma que la música está sonando. La llamada con NULL detiene el audio.
+function PlaySoundFile(FileName: string; Module: LongWord; Flags: LongWord): Boolean;
+  external 'PlaySoundW@winmm.dll stdcall delayload';
+function PlaySoundStop(FileName: LongWord; Module: LongWord; Flags: LongWord): Boolean;
+  external 'PlaySoundW@winmm.dll stdcall delayload';
 
-procedure Mci(const Cmd: string);
-var Resp: string;
+procedure MusicaParar;
 begin
-  SetLength(Resp, 256);
-  MciSendStringW(Cmd, Resp, 256, 0);
+  PlaySoundStop(0, 0, 0);
+  MusicaSonando := False;
 end;
 
 procedure MusicaIniciar;
 begin
-  if not FileExists(ExpandConstant('{tmp}\musica.wav')) then Exit;
-  Mci('open "' + ExpandConstant('{tmp}\musica.wav') + '" type waveaudio alias vigmus');
-  Mci('play vigmus repeat');
-  MusicaSonando := True;
+  MusicaSonando := FileExists(ExpandConstant('{tmp}\musica.wav')) and
+    PlaySoundFile(ExpandConstant('{tmp}\musica.wav'), 0, $0002000B);
+end;
+
+procedure ActualizarBotonMusica;
+begin
+  if MusicaSonando then begin
+    BotonMusica.Caption := '🔊';
+    BotonMusica.Hint := 'Silenciar música';
+  end else begin
+    BotonMusica.Caption := '🔇';
+    BotonMusica.Hint := 'Reproducir música';
+  end;
 end;
 
 procedure MusicaAlternar(Sender: TObject);
 begin
-  if MusicaSonando then begin
-    Mci('pause vigmus');
-    BotonMusica.Caption := 'Reproducir música';
-    MusicaSonando := False;
-  end else begin
-    Mci('play vigmus repeat');
-    BotonMusica.Caption := 'Silencio';
-    MusicaSonando := True;
-  end;
-end;
-
-procedure MusicaParar;
-begin
-  Mci('stop vigmus');
-  Mci('close vigmus');
-  MusicaSonando := False;
-end;
-
-// ---------------------------------------------------------------------------
-// Fondo del asistente en las páginas de bienvenida y final
-// ---------------------------------------------------------------------------
-procedure FondoColocar;
-begin
-  FondoBienvenida.Left := 0;
-  FondoBienvenida.Top := 0;
-  FondoBienvenida.Width := WizardForm.WelcomePage.ClientWidth;
-  FondoBienvenida.Height := WizardForm.WelcomePage.ClientHeight;
-  FondoFinal.Left := 0;
-  FondoFinal.Top := 0;
-  FondoFinal.Width := WizardForm.FinishedPage.ClientWidth;
-  FondoFinal.Height := WizardForm.FinishedPage.ClientHeight;
-end;
-
-procedure FondoCargar;
-begin
-  ExtractTemporaryFile('fondo.bmp');
-  FondoBienvenida := TBitmapImage.Create(WizardForm);
-  FondoBienvenida.Bitmap.LoadFromFile(ExpandConstant('{tmp}\fondo.bmp'));
-  FondoBienvenida.Stretch := True;
-  FondoBienvenida.Parent := WizardForm.WelcomePage;
-  FondoBienvenida.SendToBack;
-  FondoFinal := TBitmapImage.Create(WizardForm);
-  FondoFinal.Bitmap.LoadFromFile(ExpandConstant('{tmp}\fondo.bmp'));
-  FondoFinal.Stretch := True;
-  FondoFinal.Parent := WizardForm.FinishedPage;
-  FondoFinal.SendToBack;
-  FondoColocar;
-  // Texto blanco para que se lea sobre el mapa oscuro
-  WizardForm.WelcomeLabel1.Font.Color := clWhite;
-  WizardForm.WelcomeLabel2.Font.Color := clWhite;
-  WizardForm.FinishedHeadingLabel.Font.Color := clWhite;
-  WizardForm.FinishedLabel.Font.Color := clWhite;
+  if MusicaSonando then MusicaParar else MusicaIniciar;
+  ActualizarBotonMusica;
 end;
 
 // ---------------------------------------------------------------------------
@@ -360,18 +325,19 @@ begin
   ExtractTemporaryFile('musica.wav');
   BotonMusica := TNewButton.Create(WizardForm);
   BotonMusica.Parent := WizardForm;
-  BotonMusica.Caption := 'Silencio';
   BotonMusica.Left := ScaleX(12);
   BotonMusica.Top := WizardForm.NextButton.Top;
-  BotonMusica.Width := ScaleX(96);
+  BotonMusica.Width := ScaleX(48);
+  BotonMusica.Font.Name := 'Segoe UI Symbol';
+  BotonMusica.ShowHint := True;
   BotonMusica.Height := WizardForm.NextButton.Height;
   BotonMusica.OnClick := @MusicaAlternar;
-  MusicaIniciar;
+  if not WizardSilent then MusicaIniciar;
+  ActualizarBotonMusica;
 
   ObsoletosLista := TStringList.Create;
   NuevosN := 0; CambiadosN := 0; ObsoletosN := 0;
   FijoFinal := False;
-  FondoCargar;
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;

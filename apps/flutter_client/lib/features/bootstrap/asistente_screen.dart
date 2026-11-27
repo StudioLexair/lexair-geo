@@ -327,9 +327,13 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
     switch (_paso) {
       case 0:
         return _filaOpciones([
+          ('Personas', () => _elegirProposito('Persona', 'Personas', 'Personas')),
+          ('Trabajadores', () => _elegirProposito('Trabajador', 'Trabajadores', 'Trabajadores')),
+          ('Pacientes', () => _elegirProposito('Paciente', 'Pacientes', 'Pacientes')),
           ('Estudiantes', () => _elegirProposito('Estudiante', 'Estudiantes', 'Estudiantes')),
           ('Profesorado', () => _elegirProposito('Profesor', 'Profesores', 'Profesorado')),
           ('Personal y visitas', () => _elegirProposito('Colaborador', 'Colaboradores', 'Personal y visitas')),
+          ('Visitantes', () => _elegirProposito('Visitante', 'Visitantes', 'Visitantes')),
         ], textoLibre: true, onTexto: (t) => _elegirProposito(t, t, t));
       case 1:
         return _dosModos();
@@ -464,9 +468,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
           child: TextField(
             controller: _texto,
             autofocus: soloTexto,
-            onSubmitted: soloTexto
-                ? null
-                : (v) {
+            onSubmitted: (v) {
                     if (_msgs.any((m) => m.texto.contains('cuenta inicial')) &&
                         !_msgs.any((m) => m.texto.contains('dirección del servidor'))) {
                       _guardarCuenta(v);
@@ -486,7 +488,6 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
           onPressed: () {
             final v = _texto.text.trim();
             if (v.isEmpty) return;
-            if (soloTexto) return;
             if (_msgs.any((m) => m.texto.contains('cuenta inicial')) &&
                 !_msgs.any((m) => m.texto.contains('dirección del servidor'))) {
               _guardarCuenta(v);
