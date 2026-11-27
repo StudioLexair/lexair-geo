@@ -2,6 +2,7 @@ import 'local_runtime_stub.dart'
     if (dart.library.io) 'local_runtime_io.dart' as impl;
 import 'local_runtime_stub.dart'
     if (dart.library.io) 'local_runtime_io.dart' show LocalRuntimePlan;
+export 'runtime_exceptions.dart';
 export 'local_runtime_stub.dart'
     if (dart.library.io) 'local_runtime_io.dart' show LocalRuntimePlan;
 
@@ -21,8 +22,11 @@ Future<LocalRuntimePlan?> detectServidorIntegrado() => impl.detectServidorIntegr
 Future<LocalRuntimePlan?> ensureServidorIntegrado({
   void Function(String)? onLog,
   void Function(String paso, String estado)? onPaso,
+  String? usuarioInicial,
+  String? claveInicial,
 }) =>
-    impl.ensureServidorIntegrado(onLog: onLog, onPaso: onPaso);
+    impl.ensureServidorIntegrado(onLog: onLog, onPaso: onPaso,
+      usuarioInicial: usuarioInicial, claveInicial: claveInicial);
 
 /// Guarda la configuración local del modo integrado (puertos y cuenta
 /// inicial). Solo escritorio con carpeta de usuario disponible.

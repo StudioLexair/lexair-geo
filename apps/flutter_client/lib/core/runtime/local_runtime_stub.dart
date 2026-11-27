@@ -9,7 +9,8 @@ class LocalRuntimePlan {
 Future<LocalRuntimePlan?> detectServidorIntegrado() async => null;
 
 Future<LocalRuntimePlan?> ensureServidorIntegrado(
-    {void Function(String)? onLog, void Function(String paso, String estado)? onPaso}) async =>
+    {void Function(String)? onLog, void Function(String paso, String estado)? onPaso,
+    String? usuarioInicial, String? claveInicial}) async =>
     null;
 
 Future<void> guardarConfigLocal({

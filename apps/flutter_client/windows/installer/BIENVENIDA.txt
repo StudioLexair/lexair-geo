@@ -20,8 +20,8 @@ Después de instalar
 · Con el servidor integrado, la primera apertura crea la base de datos y
   carga el catálogo del territorio; puede tardar 1–2 minutos. Las siguientes
   aperturas son rápidas.
-· Cuenta inicial del modo integrado: yolexis / 123k20@A (cámbiela después
-  en Administración → Usuarios).
+· En la primera apertura, cree una cuenta de acceso propia. La aplicación
+  le pedirá cambiar su contraseña temporal al iniciar sesión.
 · Si este equipo solo será cliente del servidor de la red, desmarque la
   tarea «Servidor integrado» y elija la URL del servidor cuando se le pida.
 · Los textos de la interfaz (nombres de entidades y secciones) pueden

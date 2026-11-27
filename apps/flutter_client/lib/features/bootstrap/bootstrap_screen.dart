@@ -11,6 +11,7 @@ import '../../core/theme/app_theme.dart';
 import '../../app.dart';
 import '../../core/app_services.dart';
 import 'asistente_screen.dart';
+import 'initial_account_screen.dart';
 
 /// Pantalla de arranque del «todo en uno»: levanta el servidor integrado
 /// (base de datos + API) antes de mostrar la pantalla de acceso. Solo aparece
@@ -45,6 +46,9 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
   final List<int> _puertos = [];
   String? _error;
   bool _busy = true;
+  bool _pedirCuenta = false;
+  String? _usuarioInicial;
+  String? _claveInicial;
   int _segundos = 0;
 
   @override
@@ -64,6 +68,7 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
   Future<void> _arrancar() async {
     setState(() {
       _busy = true;
+      _pedirCuenta = false;
       _error = null;
       _estado.clear();
       _log.clear();
@@ -71,6 +76,8 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
     });
     try {
       final plan = await ensureServidorIntegrado(
+        usuarioInicial: _usuarioInicial,
+        claveInicial: _claveInicial,
         onLog: (m) {
           if (!mounted) return;
           setState(() => _log.add(m));
@@ -89,6 +96,12 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
       }
       if (!mounted) return;
       widget.onDone(config, store);
+    } on CredencialesInicialesNecesarias {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _pedirCuenta = true;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -96,6 +109,9 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
         _error = e.toString();
         _log.add('ERROR: $e');
       });
+    } finally {
+      _usuarioInicial = null;
+      _claveInicial = null;
     }
   }
 
@@ -132,6 +148,13 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_pedirCuenta) {
+      return InitialAccountScreen(onComplete: (usuario, clave) {
+        _usuarioInicial = usuario;
+        _claveInicial = clave;
+        _arrancar();
+      });
+    }
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(

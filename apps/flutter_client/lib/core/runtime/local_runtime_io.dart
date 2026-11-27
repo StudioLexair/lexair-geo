@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'runtime_secrets.dart';
+import 'runtime_exceptions.dart';
 
 /// Plan de arranque del servidor integrado (solo plataforma Windows).
 class LocalRuntimePlan {
@@ -29,8 +30,6 @@ class LocalRuntimePlan {
 
 const String _dbUser = 'lexair';
 const String _dbName = 'lexair_geo';
-const String _adminUser = 'yolexis';
-const String _adminPassword = '123k20@A';
 
 /// Configuración local opcional del servidor integrado
 /// (%LOCALAPPDATA%\VIGIA\servidor-local.json): { "puertoApi": 3000,
@@ -136,6 +135,8 @@ Future<LocalRuntimePlan?> detectServidorIntegrado() async {
 Future<LocalRuntimePlan?> ensureServidorIntegrado({
   void Function(String)? onLog,
   void Function(String paso, String estado)? onPaso,
+  String? usuarioInicial,
+  String? claveInicial,
 }) async {
   final base = await detectServidorIntegrado();
   if (base == null) return null;
@@ -347,15 +348,17 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
         .trim();
     if (users == '0') {
       final cfgLocal = _configLocal();
-      final usuario = (cfgLocal['usuarioAdmin'] as String?)?.trim().isNotEmpty == true
-          ? (cfgLocal['usuarioAdmin'] as String).trim()
-          : _adminUser;
-      final clave = (cfgLocal['claveAdmin'] as String?)?.trim().isNotEmpty == true
-          ? (cfgLocal['claveAdmin'] as String).trim()
-          : _adminPassword;
-      log('Creando cuenta inicial ($usuario)…');
+      // Los valores proporcionados por el asistente solo viven en memoria.
+      // La lectura de un archivo anterior se mantiene por compatibilidad y
+      // su clave se retira tras crear la cuenta.
+      final usuario = usuarioInicial ?? (cfgLocal['usuarioAdmin'] as String?);
+      final clave = claveInicial ?? (cfgLocal['claveAdmin'] as String?);
+      if (usuario == null || usuario.trim().isEmpty || clave == null || clave.isEmpty) {
+        throw const CredencialesInicialesNecesarias();
+      }
+      log('Creando cuenta inicial…');
       final r = _run(plan.nodeExe,
-          ['api/dist/cli/create-admin.js', '--username', usuario, '--allow-weak'],
+          ['api/dist/cli/create-admin.js', '--username', usuario.trim()],
           workingDirectory: plan.baseDir,
           env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': jwtSecret,
                 'LEXAIR_ADMIN_PASSWORD': clave, 'NODE_ENV': 'production'});

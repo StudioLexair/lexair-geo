@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/config/terminologia.dart';
 import '../../core/config/app_config.dart';
-import '../../core/runtime/local_runtime.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Decisión final del asistente de primera configuración.
@@ -150,9 +149,9 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
             'sin red. La primera preparación tarda uno o dos minutos; las '
             'siguientes veces abre rápido.');
       }
-      await _bot('¿Dejamos la cuenta inicial por defecto o la personalizas?',
+      await _bot('A continuación podrás crear una cuenta de acceso propia y segura.',
           espera: const Duration(milliseconds: 400));
-      if (mounted) setState(() {});
+      if (mounted) await _terminarLocal();
     } else {
       await _bot('Escribe la dirección del servidor de tu organización '
           '(por ejemplo https://geo.interno o http://192.168.10.10:3000). '
@@ -161,31 +160,11 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
     }
   }
 
-  // --- Paso 3 · cuenta local ------------------------------------------------
-  Future<void> _cuenta(bool personalizar) async {
-    _yo(personalizar ? 'Quiero personalizarla' : 'Cuenta por defecto');
-    if (!personalizar) {
-      await _terminarLocal(null, null);
-      return;
-    }
-    await _bot('Indica el nombre de la cuenta (la contraseña inicial será '
-        '123k20@A; cámbiala después en Administración → Usuarios).');
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _guardarCuenta(String usuario) async {
-    _yo(usuario);
-    await _terminarLocal(usuario, null);
-  }
-
-  Future<void> _terminarLocal(String? usuario, String? clave) async {
-    if (usuario != null && usuario.trim().isNotEmpty) {
-      await guardarConfigLocal(usuarioAdmin: usuario, claveAdmin: clave);
-    }
+  Future<void> _terminarLocal() async {
     await widget.onFlag();
-    await _bot('Todo guardado. Preparo el sistema (puedes ver el avance '
-        'paso a paso) y pasamos al acceso.');
-    widget.onDecision(const DecisionLocal());
+    if (!mounted) return;
+    await _bot('Preparo el sistema y, si es la primera vez, te pediré una cuenta.');
+    if (mounted) widget.onDecision(const DecisionLocal());
   }
 
   Future<void> _guardarUrl(String url) async {
@@ -341,12 +320,6 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
       case 1:
         return _dosModos();
       case 2:
-        if (_msgs.isNotEmpty && _msgs.last.texto.contains('cuenta inicial')) {
-          return _filaOpciones([
-            ('Por defecto (yolexis)', () => _cuenta(false)),
-            ('Personalizar', () => _cuenta(true)),
-          ]);
-        }
         return _entrada(soloTexto: soloTexto);
       default:
         return const SizedBox.shrink();
@@ -471,18 +444,9 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
           child: TextField(
             controller: _texto,
             autofocus: soloTexto,
-            onSubmitted: (v) {
-                    if (_msgs.any((m) => m.texto.contains('cuenta inicial')) &&
-                        !_msgs.any((m) => m.texto.contains('dirección del servidor'))) {
-                      _guardarCuenta(v);
-                    } else {
-                      _guardarUrl(v);
-                    }
-                  },
+            onSubmitted: (v) => _guardarUrl(v),
             decoration: InputDecoration(
-              hintText: _msgs.any((m) => m.texto.contains('cuenta inicial'))
-                  ? 'Nombre de la cuenta'
-                  : 'https://… o http://…',
+              hintText: 'https://… o http://…',
             ),
           ),
         ),
@@ -491,12 +455,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
           onPressed: () {
             final v = _texto.text.trim();
             if (v.isEmpty) return;
-            if (_msgs.any((m) => m.texto.contains('cuenta inicial')) &&
-                !_msgs.any((m) => m.texto.contains('dirección del servidor'))) {
-              _guardarCuenta(v);
-            } else {
-              _guardarUrl(v);
-            }
+            _guardarUrl(v);
           },
           child: const Text('Listo'),
         ),

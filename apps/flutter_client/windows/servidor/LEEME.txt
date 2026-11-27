@@ -15,8 +15,8 @@ nada para empezar a trabajar.
 · Qué hace al arrancar
   1. Inicia la base de datos en el puerto 5433 (solo su máquina).
   2. Crea la base, sus migraciones y el catálogo del territorio.
-  3. Crea la cuenta inicial:  usuario: yolexis · contraseña: 123k20@A
-     (Cámbiela en Administración → Usuarios cuando empiece a usarla.)
+  3. Solicita un usuario y una contraseña propios para crear la primera cuenta.
+     Esta contraseña es temporal y deberá cambiarse al primer acceso.
   4. Inicia el servicio en http://127.0.0.1:3000 y conecta el cliente a él.
 
 · Puertos
