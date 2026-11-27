@@ -399,14 +399,30 @@ begin
   // Versiones anteriores: preguntar si se conservan los datos existentes.
   if CurStep = ssInstall then begin
     Datos := ExpandConstant('{localappdata}\VIGIA\datos');
-    if DirExists(Datos) then begin
+    // En modo silencioso siempre se conservan los datos, sin preguntas.
+    if DirExists(Datos) and not WizardSilent then begin
       Mensaje := 'Se ha detectado una instalación anterior con datos guardados.' #13#10#13#10 +
         '¿Desea CONSERVAR los datos existentes? (Recomendado: conserva la base, ' +
         'las zonas y las ubicaciones marcadas.)' #13#10#13#10 +
         'Elija «No» solo si quiere empezar de cero; en ese caso los datos ' +
         'anteriores se eliminarán.';
-      if MsgBox(Mensaje, mbConfirmation, MB_YESNO) = IDNO then
-        DelTree(Datos, True, True, True);
+      if MsgBox(Mensaje, mbConfirmation, MB_YESNO or MB_DEFBUTTON1) = IDNO then begin
+        Mensaje := '¿Confirma la eliminación permanente de los datos de este equipo?' #13#10#13#10 +
+          'Esta acción no se puede deshacer. Antes de continuar, haga una copia de seguridad.';
+        if MsgBox(Mensaje, mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then begin
+          // Un postmaster.pid puede ser de una instancia activa o de un cierre
+          // incorrecto: nunca borrar automáticamente en ninguno de los casos.
+          if FileExists(Datos + '\postmaster.pid') then begin
+            MsgBox('No se pueden eliminar los datos mientras la base de datos pueda estar en uso. ' +
+              'Cierre VIGÍA y detenga su servidor de forma segura antes de volver a intentarlo.', mbError, MB_OK);
+            Abort;
+          end;
+          if not DelTree(Datos, True, True, True) then begin
+            MsgBox('No se pudieron eliminar los datos. La instalación se ha detenido.', mbError, MB_OK);
+            Abort;
+          end;
+        end;
+      end;
     end;
     // Retirar los ficheros de la versión anterior que esta versión no usa.
     for N := 0 to ObsoletosLista.Count - 1 do begin
