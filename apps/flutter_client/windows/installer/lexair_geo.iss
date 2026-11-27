@@ -224,7 +224,9 @@ var P: string; I: Integer;
 begin
   P := LowerCase(Ruta) + #9;
   Indice.Find(P, I);
-  Result := (I < Indice.Count) and (Copy(Indice[I], 1, Length(P)) = P);
+  Result := False;
+  if I >= Indice.Count then Exit;
+  Result := Copy(Indice[I], 1, Length(P)) = P;
   if Result then Hash := Copy(Indice[I], Length(P) + 1, MaxInt);
 end;
 
@@ -244,12 +246,24 @@ begin
       NuevosIndice.Add(LowerCase(NuevosR[I]) + #9 + NuevosH[I]);
     NuevosIndice.Sort;
     NuevosIndice.Sorted := True;
+    if NuevosR.Count > 0 then begin
+      if not BuscarHash(NuevosIndice, NuevosR[0], Hash) then begin
+        Log('No se pudo indexar el manifiesto nuevo; no se retirarán archivos anteriores.');
+        Exit;
+      end;
+    end;
     if FileExists(RutaVieja) then begin
       ManifiestoCargar(RutaVieja, ViejosR, ViejosH);
       for I := 0 to ViejosR.Count - 1 do
         ViejosIndice.Add(LowerCase(ViejosR[I]) + #9 + ViejosH[I]);
       ViejosIndice.Sort;
       ViejosIndice.Sorted := True;
+      if ViejosR.Count > 0 then begin
+        if not BuscarHash(ViejosIndice, ViejosR[0], Hash) then begin
+          Log('No se pudo indexar el manifiesto anterior; no se retirarán archivos.');
+          Exit;
+        end;
+      end;
       for I := 0 to NuevosR.Count - 1 do begin
         if not BuscarHash(ViejosIndice, NuevosR[I], Hash) then
           NuevosN := NuevosN + 1
