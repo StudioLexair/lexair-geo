@@ -44,6 +44,48 @@ try {
   if ($signature.Length -lt 100 -or $signature[0] -ne 137 -or $signature[1] -ne 80 -or $signature[2] -ne 78 -or $signature[3] -ne 71) { throw 'Mosaico PNG inválido' }
   Write-Host 'Mapa real: manifiesto, estilos y mosaico local verificados.'
   Write-Host 'Instalador, arranque del programa y acceso mediante API: correctos'
+  # Entrada interactiva real: solo cuenta ficticia en el runner efímero.
+  Add-Type -AssemblyName System.Windows.Forms
+  Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class VigiaCiWindow {
+  [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out Rect r);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint x, uint y, uint data, UIntPtr extra);
+}
+'@
+  $psql = Join-Path $root 'servidor\pg\bin\psql.exe'
+  $sql = 'SELECT count(*) FROM security.sessions'
+  $before = [int]((& $psql -h 127.0.0.1 -p 5433 -U lexair -d lexair_geo -tAc $sql | Out-String).Trim())
+  $process.Refresh()
+  if ($process.MainWindowHandle -eq [IntPtr]::Zero) { throw 'No se encontró la ventana para probar el acceso visual' }
+  [VigiaCiWindow]::ShowWindow($process.MainWindowHandle, 3) | Out-Null
+  [VigiaCiWindow]::SetForegroundWindow($process.MainWindowHandle) | Out-Null
+  Start-Sleep -Seconds 3
+  $rect = New-Object VigiaCiWindow+Rect
+  [VigiaCiWindow]::GetWindowRect($process.MainWindowHandle, [ref]$rect) | Out-Null
+  $width = $rect.Right - $rect.Left; $height = $rect.Bottom - $rect.Top
+  $x = [int]($rect.Left + $width * 0.75)
+  $y = [int]($rect.Top + 30 + ($height - 30) / 2 - 48)
+  [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($x, $y)
+  [VigiaCiWindow]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+  [VigiaCiWindow]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+  [System.Windows.Forms.SendKeys]::SendWait('ci-operator')
+  [System.Windows.Forms.SendKeys]::SendWait('{TAB}')
+  [System.Windows.Forms.SendKeys]::SendWait('Changed-CI-4769')
+  [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+  $guiOk = $false
+  for ($i = 0; $i -lt 20; $i++) {
+    Start-Sleep -Seconds 1
+    $after = [int]((& $psql -h 127.0.0.1 -p 5433 -U lexair -d lexair_geo -tAc $sql | Out-String).Trim())
+    if ($after -gt $before) { $guiOk = $true; break }
+  }
+  if (-not $guiOk) { throw 'No se pudo confirmar el acceso mediante la ventana de VIGÍA' }
+  Start-Sleep -Seconds 5
+  Write-Host 'Acceso interactivo confirmado en la ventana con una cuenta ficticia.'
 } finally {
   $env:PATH = $oldPath
   Write-Host 'Diagnóstico de dependencias PE de PostGIS instalado:'

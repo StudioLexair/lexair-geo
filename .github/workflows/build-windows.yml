@@ -258,7 +258,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: vigia-pantalla-windows
-          path: ${{ runner.temp }}/vigia-ci-pantalla.png
+          path: |
+            ${{ runner.temp }}/vigia-ci-pantalla.png
+            ${{ runner.temp }}/vigia-ci-mapa.png
           if-no-files-found: ignore
           retention-days: 7
 
