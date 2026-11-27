@@ -253,6 +253,10 @@ jobs:
       - name: Prueba del instalador, arranque y acceso (Windows)
         working-directory: ${{ github.workspace }}
         run: ./scripts/windows/smoke-install.ps1
+      - name: Probar el ZIP portable descomprimido
+        if: ${{ !inputs.diagnostico }}
+        working-directory: ${{ github.workspace }}
+        run: ./scripts/windows/smoke-portable.ps1
       - name: Capturar bienvenida del instalador
         working-directory: ${{ github.workspace }}
         run: ./scripts/windows/capture-installer.ps1
