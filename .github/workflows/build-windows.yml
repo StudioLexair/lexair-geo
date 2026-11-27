@@ -82,17 +82,29 @@ jobs:
           if (-not (Test-Path (Join-Path $payload 'bin'))) { throw "raíz del payload PostGIS no identificada: $($ctrl.FullName)" }
           Write-Host "Payload PostGIS: $payload"
           Copy-Item "$payload\*" $pg -Recurse -Force
-          # PROTOTIPO DE DIAGNÓSTICO: libcurl necesita estas dependencias que no
-          # están incluidas en el payload. Solo se probarán en la rama de CI;
-          # antes de distribuir hay que fijar origen y licencias verificadas.
-          $gitBin = 'C:\Program Files\Git\mingw64\bin'
-          foreach ($dll in 'libbrotlidec.dll','libbrotlicommon.dll','libnghttp2-14.dll') {
-            if (-not (Test-Path (Join-Path $gitBin $dll))) { throw "Falta dependencia en runner: $dll" }
-            if (-not (Test-Path (Join-Path "$pg\bin" $dll))) {
-              Copy-Item (Join-Path $gitBin $dll) (Join-Path "$pg\bin" $dll)
-              Write-Host "Dependencia provisional para diagnóstico: $dll (Git for Windows del runner)"
-            }
+          # Dependencias ausentes en instalaciones limpias. Paquetes x64 de
+          # MSYS2 fijados por versión y SHA-256; conservar sus licencias MIT.
+          $deps = @(
+            @{ File='mingw-w64-x86_64-brotli-1.2.1-1-any.pkg.tar.zst'; Hash='3163fae24021624b49d3372a6a7fe05c0f3e01b301e65fcbcb3a95557019fb2d' },
+            @{ File='mingw-w64-x86_64-nghttp2-1.71.0-1-any.pkg.tar.zst'; Hash='e868085eed6dd47d81fe19e5048477f8ca0dcc8b8bd3b74a8181b063b6609c6f' }
+          )
+          $msys = Join-Path $tmp 'msys-deps'
+          New-Item -ItemType Directory -Force $msys | Out-Null
+          foreach ($dep in $deps) {
+            $archive = Join-Path $tmp $dep.File
+            Invoke-WebRequest "https://mirror.msys2.org/mingw/mingw64/$($dep.File)" -OutFile $archive
+            if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() -ne $dep.Hash) { throw "SHA incorrecto: $($dep.File)" }
+            tar.exe -xf $archive -C $msys
+            if ($LASTEXITCODE -ne 0) { throw "No se pudo extraer $($dep.File)" }
           }
+          foreach ($dll in 'libbrotlidec.dll','libbrotlicommon.dll','libnghttp2-14.dll') {
+            $src = Join-Path $msys "mingw64\bin\$dll"
+            if (-not (Test-Path $src)) { throw "Falta dependencia: $dll" }
+            Copy-Item $src (Join-Path "$pg\bin" $dll) -Force
+          }
+          New-Item -ItemType Directory -Force "$pg\licenses\brotli","$pg\licenses\nghttp2" | Out-Null
+          Copy-Item "$msys\mingw64\share\licenses\brotli\LICENSE" "$pg\licenses\brotli\LICENSE"
+          Copy-Item "$msys\mingw64\share\licenses\nghttp2\COPYING" "$pg\licenses\nghttp2\COPYING"
           if (-not (Test-Path "$pg\share\extension\postgis.control")) { throw 'postgis.control no quedó en share/extension' }
 
           # Prueba real: clúster temporal + CREATE EXTENSION postgis
