@@ -13,7 +13,7 @@ on:
         type: boolean
         default: false
       mapa_run:
-        description: 'Solo diagnóstico: ID de una ejecución con paquete cartográfico completo (opcional)'
+        description: 'Opcional: ID de una ejecución con paquete cartográfico completo ya generado'
         type: string
         required: false
         default: ''
@@ -29,14 +29,14 @@ permissions:
 
 jobs:
   mapa:
-    if: ${{ !(inputs.diagnostico && inputs.mapa_run) }}
+    if: ${{ !inputs.mapa_run }}
     uses: ./.github/workflows/build-map.yml
     with:
       maxzoom: '16'
 
   windows:
     needs: mapa
-    if: ${{ !cancelled() && (needs.mapa.result == 'success' || (inputs.diagnostico && inputs.mapa_run && needs.mapa.result == 'skipped')) }}
+    if: ${{ !cancelled() && (needs.mapa.result == 'success' || (inputs.mapa_run && needs.mapa.result == 'skipped')) }}
     runs-on: windows-2025
     defaults:
       run:
@@ -134,14 +134,14 @@ jobs:
           "$pg" | Out-File -Encoding ascii $env:RUNNER_TEMP\pg-dir.txt
 
       - name: Descargar cartografía generada en esta ejecución
-        if: ${{ !inputs.mapa_run || !inputs.diagnostico }}
+        if: ${{ !inputs.mapa_run }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: paquete-cartografico-${{ github.run_number }}
           path: ${{ runner.temp }}/paquete-cartografico
 
-      - name: Recuperar cartografía completa para diagnóstico
-        if: ${{ inputs.diagnostico && inputs.mapa_run }}
+      - name: Recuperar cartografía completa de una ejecución anterior
+        if: ${{ inputs.mapa_run }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: paquete-cartografico-*
