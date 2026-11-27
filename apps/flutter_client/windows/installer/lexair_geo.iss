@@ -246,9 +246,13 @@ begin
       NuevosIndice.Add(LowerCase(NuevosR[I]) + #9 + NuevosH[I]);
     NuevosIndice.Sort;
     NuevosIndice.Sorted := True;
-    if NuevosR.Count > 0 then begin
-      if not BuscarHash(NuevosIndice, NuevosR[0], Hash) then begin
+    for I := 0 to NuevosR.Count - 1 do begin
+      if not BuscarHash(NuevosIndice, NuevosR[I], Hash) then begin
         Log('No se pudo indexar el manifiesto nuevo; no se retirarán archivos anteriores.');
+        Exit;
+      end;
+      if Hash <> NuevosH[I] then begin
+        Log('El índice del manifiesto nuevo no coincide; no se retirarán archivos anteriores.');
         Exit;
       end;
     end;
@@ -258,9 +262,13 @@ begin
         ViejosIndice.Add(LowerCase(ViejosR[I]) + #9 + ViejosH[I]);
       ViejosIndice.Sort;
       ViejosIndice.Sorted := True;
-      if ViejosR.Count > 0 then begin
-        if not BuscarHash(ViejosIndice, ViejosR[0], Hash) then begin
+      for I := 0 to ViejosR.Count - 1 do begin
+        if not BuscarHash(ViejosIndice, ViejosR[I], Hash) then begin
           Log('No se pudo indexar el manifiesto anterior; no se retirarán archivos.');
+          Exit;
+        end;
+        if Hash <> ViejosH[I] then begin
+          Log('El índice del manifiesto anterior no coincide; no se retirarán archivos.');
           Exit;
         end;
       end;
