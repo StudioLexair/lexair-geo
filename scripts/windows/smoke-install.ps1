@@ -48,6 +48,8 @@ try {
     $bitmap.Save((Join-Path $env:RUNNER_TEMP 'vigia-ci-pantalla.png'), [System.Drawing.Imaging.ImageFormat]::Png)
     $graphics.Dispose(); $bitmap.Dispose()
   } catch { Write-Host "Captura no disponible en este runner: $_" }
+  $bootstrapLog = Join-Path $localDir 'logs\arranque.log'
+  if (Test-Path $bootstrapLog) { Write-Host 'Detalle del arranque:'; Get-Content $bootstrapLog -Tail 100 }
   $log = Join-Path $localDir 'logs\postgresql.log'
   if (Test-Path $log) { Get-Content $log -Tail 100 }
   if ($process -and -not $process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }

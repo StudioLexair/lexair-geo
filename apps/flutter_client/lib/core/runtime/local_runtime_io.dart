@@ -139,7 +139,18 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
 }) async {
   final base = await detectServidorIntegrado();
   if (base == null) return null;
-  void log(String m) => onLog?.call(m);
+  void log(String m) {
+    onLog?.call(m);
+    // Registro de arranque sin datos de fichas, útil si la ventana se tapa.
+    try {
+      final local = Platform.environment['LOCALAPPDATA'];
+      if (local != null) {
+        final f = File('$local\\VIGIA\\logs\\arranque.log');
+        f.parent.createSync(recursive: true);
+        f.writeAsStringSync('$m\n', mode: FileMode.append, flush: true);
+      }
+    } catch (_) {}
+  }
   final completados = <String>{};
   void paso(String k, String e) {
     if (e == 'listo' || e == 'omitido') completados.add(k);
@@ -348,6 +359,7 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
     log('Servidor integrado listo en ${plan.serverUrl}');
     return plan;
   } catch (e) {
+    log('ERROR: $e');
     for (final k in const ['bd', 'esquema', 'catalogo', 'cuenta', 'api']) {
       // Solo los pasos que no llegaron a terminar quedan en error.
       if (!completados.contains(k)) onPaso?.call(k, 'error');
