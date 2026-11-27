@@ -64,7 +64,9 @@ jobs:
           cache: true
       - run: flutter pub get --enforce-lockfile
       - run: flutter analyze
-      - run: flutter test
+      - name: Pruebas Flutter
+        timeout-minutes: 6
+        run: flutter test --timeout 60s
 
   scripts:
     name: Scripts (shellcheck, Python, SQL de mapas)

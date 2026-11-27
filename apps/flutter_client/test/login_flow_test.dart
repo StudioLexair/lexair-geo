@@ -52,7 +52,8 @@ void main() {
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
     expect(aplicado, isTrue);
-    expect((await ConfigStore().load()).serverUrl, 'http://192.168.1.22:3000');
+    expect((await SharedPreferences.getInstance()).getString('lexair.serverUrlOverride'),
+        'http://192.168.1.22:3000');
     expect(find.textContaining('Reinicie la aplicación'), findsNothing);
   });
 
