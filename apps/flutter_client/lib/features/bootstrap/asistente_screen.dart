@@ -445,7 +445,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
             controller: _texto,
             autofocus: soloTexto,
             onSubmitted: (v) => _guardarUrl(v),
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: 'https://… o http://…',
             ),
           ),

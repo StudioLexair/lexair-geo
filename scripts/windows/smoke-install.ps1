@@ -10,19 +10,19 @@ $app = Join-Path $root 'lexair_geo.exe'
 foreach ($f in @('lexair_geo.exe','servidor\sql\migrations\0001_extensions_and_schemas.sql','servidor\pg\lib\postgis-3.dll','servidor\tiles\src\server.mjs','servidor\mapa\manifest.json','servidor\mapa\standard.mbtiles')) {
   if (-not (Test-Path (Join-Path $root $f))) { throw "Falta en la instalación: $f" }
 }
-# Evita depender de la pantalla interactiva para ejercitar el arranque real.
-# Se crea una cuenta efímera de CI, nunca datos reales.
+# La cuenta se crea mediante la pantalla real con datos ficticios en CI.
 $vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($app)
 $prefsDir = Join-Path (Join-Path $env:APPDATA $vi.CompanyName) $vi.ProductName
 New-Item -ItemType Directory -Force $prefsDir | Out-Null
 '{"flutter.lexair.asistenteCompletado":true}' | Set-Content (Join-Path $prefsDir 'shared_preferences.json') -Encoding utf8NoBOM
 $localDir = Join-Path $env:LOCALAPPDATA 'VIGIA'
 New-Item -ItemType Directory -Force $localDir | Out-Null
-'{"usuarioAdmin":"ci-operator","claveAdmin":"Temporary-CI-8192"}' | Set-Content (Join-Path $localDir 'servidor-local.json') -Encoding utf8NoBOM
+. (Join-Path $env:GITHUB_WORKSPACE 'scripts\windows\create-initial-account-ci.ps1')
 $oldPath = $env:PATH
 $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
 try {
   $process = Start-Process -FilePath $app -WorkingDirectory $root -PassThru
+  New-VigiaCiAccount $process $localDir 'ci-operator' 'Temporary-CI-8192'
   $ok = $false
   for ($i = 0; $i -lt 45; $i++) {
     Start-Sleep -Seconds 2
@@ -30,6 +30,8 @@ try {
     if ($process.HasExited) { throw "La aplicación terminó antes de arrancar: $($process.ExitCode)" }
   }
   if (-not $ok) { throw 'La API no respondió dentro del límite de arranque' }
+  $configPath = Join-Path $localDir 'servidor-local.json'
+  if ((Test-Path $configPath) -and ((Get-Content $configPath -Raw) -match 'Temporary-CI-8192|claveAdmin')) { throw 'Se guardó la clave inicial en el archivo de configuración' }
   $body = @{ username='ci-operator'; password='Temporary-CI-8192'; clientKind='windows' } | ConvertTo-Json
   $auth = Invoke-RestMethod -Method Post -ContentType 'application/json' -Body $body 'http://127.0.0.1:3000/api/v1/auth/login'
   if (-not $auth.token) { throw 'El acceso de CI no devolvió un token' }

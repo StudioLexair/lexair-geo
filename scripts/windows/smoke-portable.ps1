@@ -20,10 +20,11 @@ foreach ($base in @($env:LOCALAPPDATA, $env:APPDATA, $oldLocal, $oldRoaming)) {
 }
 $local = Join-Path $env:LOCALAPPDATA 'VIGIA'
 New-Item -ItemType Directory -Force $local | Out-Null
-'{"usuarioAdmin":"portable-ci","claveAdmin":"Portable-CI-3842"}' | Set-Content (Join-Path $local 'servidor-local.json') -Encoding utf8NoBOM
+. (Join-Path $env:GITHUB_WORKSPACE 'scripts\windows\create-initial-account-ci.ps1')
 $process = $null
 try {
   $process = Start-Process -FilePath $app -WorkingDirectory $root -PassThru
+  New-VigiaCiAccount $process $local 'portable-ci' 'Portable-CI-3842'
   $ok = $false
   for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep -Seconds 2
@@ -31,6 +32,8 @@ try {
     if ($process.HasExited) { throw 'El portable terminó antes de arrancar' }
   }
   if (-not $ok) { throw 'El portable no arrancó el servidor' }
+  $configPath = Join-Path $local 'servidor-local.json'
+  if ((Test-Path $configPath) -and ((Get-Content $configPath -Raw) -match 'Portable-CI-3842|claveAdmin')) { throw 'Se guardó la clave inicial en el archivo de configuración' }
   $body = @{ username='portable-ci'; password='Portable-CI-3842'; clientKind='windows' } | ConvertTo-Json
   $auth = Invoke-RestMethod -Method Post -ContentType 'application/json' -Body $body 'http://127.0.0.1:3000/api/v1/auth/login'
   if (-not $auth.token) { throw 'El acceso del portable no funcionó' }

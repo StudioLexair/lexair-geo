@@ -347,12 +347,10 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
         .toString()
         .trim();
     if (users == '0') {
-      final cfgLocal = _configLocal();
-      // Los valores proporcionados por el asistente solo viven en memoria.
-      // La lectura de un archivo anterior se mantiene por compatibilidad y
-      // su clave se retira tras crear la cuenta.
-      final usuario = usuarioInicial ?? (cfgLocal['usuarioAdmin'] as String?);
-      final clave = claveInicial ?? (cfgLocal['claveAdmin'] as String?);
+      // Nunca crear una cuenta desde contraseñas antiguas guardadas en texto
+      // claro. Las cuentas ya existentes de versiones anteriores se conservan.
+      final usuario = usuarioInicial;
+      final clave = claveInicial;
       if (usuario == null || usuario.trim().isEmpty || clave == null || clave.isEmpty) {
         throw const CredencialesInicialesNecesarias();
       }
@@ -421,6 +419,9 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
     paso('api', 'listo');
     log('Servidor integrado listo en ${plan.serverUrl}');
     return plan;
+  } on CredencialesInicialesNecesarias {
+    log('Esperando creación de la primera cuenta.');
+    rethrow;
   } catch (e) {
     log('ERROR: $e');
     for (final k in const ['bd', 'esquema', 'catalogo', 'cuenta', 'api']) {
