@@ -242,12 +242,30 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
 
     // 2 · Levantar PostgreSQL.
     log('Iniciando base de datos local (puerto $puertoBd)…');
-    await Process.start(
-      '${plan.pgBin}\\pg_ctl.exe',
-      ['-D', dataDir, '-o', '-p $puertoBd', '-l', '$logDir\\postgresql.log', '-w', 'start'],
-      environment: env,
-      mode: ProcessStartMode.detached,
-    );
+    // Nunca utilizar un servidor ajeno simplemente porque ocupa el puerto.
+    if (reusarBd) {
+      final estado = _run('${plan.pgBin}\\pg_ctl.exe', ['-D', dataDir, 'status']);
+      final pid = File('$dataDir\\postmaster.pid');
+      final lineas = pid.existsSync() ? pid.readAsLinesSync() : <String>[];
+      final puertoPropio = lineas.length > 3 ? int.tryParse(lineas[3].trim()) : null;
+      if (estado.exitCode != 0 || puertoPropio != puertoBd) {
+        throw Exception('El puerto de la base de datos está ocupado por otro servicio.');
+      }
+      log('Base de datos propia ya en marcha.');
+    } else {
+      // Process.run usa CREATE_NO_WINDOW en Windows. Con detached, pg_ctl
+      // queda sin consola y su proceso hijo puede abrir una ventana visible.
+      final inicioPg = await Process.run(
+        '${plan.pgBin}\\pg_ctl.exe',
+        ['-D', dataDir, '-o', '-p $puertoBd', '-l', '$logDir\\postgresql.log', '-w', 'start'],
+        environment: env,
+        stdoutEncoding: const Utf8Codec(allowMalformed: true),
+        stderrEncoding: const Utf8Codec(allowMalformed: true),
+      );
+      if (inicioPg.exitCode != 0) {
+        throw Exception('No se pudo iniciar la base de datos: ${_tail(inicioPg)}');
+      }
+    }
     if (!await _esperarPuerto(puertoBd, const Duration(seconds: 60))) {
       throw Exception('La base de datos no abrió el puerto $puertoBd (ver $logDir)');
     }
