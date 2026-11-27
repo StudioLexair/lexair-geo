@@ -216,51 +216,59 @@ begin
   end;
 end;
 
-function BuscarEn(const Lista: TStringList; const Ruta: string): Integer;
-var I: Integer;
+// Índice ordenado: ruta + TAB (no es válido en nombres Windows) + hash.
+// Find usa búsqueda binaria, evitando comparar cada archivo con todos los
+// demás al actualizar instalaciones grandes.
+function BuscarHash(const Indice: TStringList; const Ruta: string; var Hash: string): Boolean;
+var P: string; I: Integer;
 begin
-  Result := -1;
-  for I := 0 to Lista.Count - 1 do
-    if CompareText(Lista[I], Ruta) = 0 then begin
-      Result := I;
-      Break;
-    end;
+  P := LowerCase(Ruta) + #9;
+  Indice.Find(P, I);
+  Result := (I < Indice.Count) and (Copy(Indice[I], 1, Length(P)) = P);
+  if Result then Hash := Copy(Indice[I], Length(P) + 1, MaxInt);
 end;
 
 function ManifiestoComparar(const RutaNueva, RutaVieja: string): Boolean;
-var NuevosR, NuevosH, ViejosR, ViejosH: TStringList;
-    I, Idx: Integer;
+var NuevosR, NuevosH, ViejosR, ViejosH, NuevosIndice, ViejosIndice: TStringList;
+    I: Integer; Hash: string;
 begin
   Result := False;
   NuevosN := 0; CambiadosN := 0; ObsoletosN := 0;
   if not FileExists(RutaNueva) then Exit;
   NuevosR := TStringList.Create; NuevosH := TStringList.Create;
   ViejosR := TStringList.Create; ViejosH := TStringList.Create;
+  NuevosIndice := TStringList.Create; ViejosIndice := TStringList.Create;
   try
     ManifiestoCargar(RutaNueva, NuevosR, NuevosH);
+    for I := 0 to NuevosR.Count - 1 do
+      NuevosIndice.Add(LowerCase(NuevosR[I]) + #9 + NuevosH[I]);
+    NuevosIndice.Sort;
+    NuevosIndice.Sorted := True;
     if FileExists(RutaVieja) then begin
       ManifiestoCargar(RutaVieja, ViejosR, ViejosH);
-      // nuevos y modificados: lo que trae esta versión
+      for I := 0 to ViejosR.Count - 1 do
+        ViejosIndice.Add(LowerCase(ViejosR[I]) + #9 + ViejosH[I]);
+      ViejosIndice.Sort;
+      ViejosIndice.Sorted := True;
       for I := 0 to NuevosR.Count - 1 do begin
-        Idx := BuscarEn(ViejosR, NuevosR[I]);
-        if Idx < 0 then
+        if not BuscarHash(ViejosIndice, NuevosR[I], Hash) then
           NuevosN := NuevosN + 1
-        else if ViejosH[Idx] <> NuevosH[I] then
+        else if Hash <> NuevosH[I] then
           CambiadosN := CambiadosN + 1;
       end;
-      // obsoletos: estaba en la versión anterior y ya no viene
       for I := 0 to ViejosR.Count - 1 do begin
-        if BuscarEn(NuevosR, ViejosR[I]) < 0 then begin
+        if not BuscarHash(NuevosIndice, ViejosR[I], Hash) then begin
           ObsoletosN := ObsoletosN + 1;
           ObsoletosLista.Add(ViejosR[I]);
         end;
       end;
     end else begin
-      NuevosN := NuevosR.Count; // primera instalación con manifiesto
+      NuevosN := NuevosR.Count;
     end;
     Result := True;
   finally
     NuevosR.Free; NuevosH.Free; ViejosR.Free; ViejosH.Free;
+    NuevosIndice.Free; ViejosIndice.Free;
   end;
 end;
 

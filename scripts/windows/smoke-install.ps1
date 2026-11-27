@@ -117,8 +117,18 @@ public static class VigiaCiWindow {
 
 # Reinstalar sobre la misma ruta, sin borrar datos, y comprobar la cuenta y
 # contraseña modificada del ensayo anterior (no hay datos de producción).
-$again = Start-Process -FilePath $exe -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/ROLE=red',"/DIR=$root") -Wait -PassThru
-if ($again.ExitCode -ne 0) { throw "Reinstalación falló: $($again.ExitCode)" }
+$updateLog = Join-Path $env:RUNNER_TEMP 'vigia-ci-reinstalacion.log'
+Write-Host 'Iniciando reinstalación silenciosa sobre los datos de prueba…'
+$again = Start-Process -FilePath $exe -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/ROLE=red',"/DIR=$root", "/LOG=$updateLog") -PassThru
+if (-not $again.WaitForExit(240000)) {
+  if (Test-Path $updateLog) { Get-Content $updateLog -Tail 60 | Out-Host }
+  Stop-Process -Id $again.Id -Force -ErrorAction SilentlyContinue
+  throw 'La reinstalación no terminó en cuatro minutos'
+}
+if ($again.ExitCode -ne 0) {
+  if (Test-Path $updateLog) { Get-Content $updateLog -Tail 60 | Out-Host }
+  throw "Reinstalación falló: $($again.ExitCode)"
+}
 if (-not (Test-Path (Join-Path $data 'PG_VERSION'))) { throw 'La reinstalación no conservó la base de datos' }
 try {
   $process2 = Start-Process -FilePath $app -WorkingDirectory $root -PassThru
