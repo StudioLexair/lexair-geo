@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'runtime_secrets.dart';
+
 /// Plan de arranque del servidor integrado (solo plataforma Windows).
 class LocalRuntimePlan {
   const LocalRuntimePlan({
@@ -27,8 +29,6 @@ class LocalRuntimePlan {
 
 const String _dbUser = 'lexair';
 const String _dbName = 'lexair_geo';
-const String _jwtSecret =
-    'lexair-demo-secret-2026-minint-villa-clara-0123456789';
 const String _adminUser = 'yolexis';
 const String _adminPassword = '123k20@A';
 
@@ -84,7 +84,7 @@ Future<void> guardarConfigLocal({
   final dir = Directory('$local\\VIGIA');
   if (!dir.existsSync()) dir.createSync(recursive: true);
   final f = File('$local\\VIGIA\\servidor-local.json');
-  Map<String, dynamic> actual = const {};
+  Map<String, dynamic> actual = {};
   if (f.existsSync()) {
     try {
       final d = jsonDecode(f.readAsStringSync());
@@ -218,6 +218,7 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
   Directory(dataDir).createSync(recursive: true);
   Directory(logDir).createSync(recursive: true);
   final dbUrl = 'postgres://$_dbUser@127.0.0.1:$puertoBd/$_dbName';
+  final jwtSecret = generarSecretoSesion();
   final env = {
     ...Platform.environment,
     'PGPORT': '$puertoBd',
@@ -312,7 +313,7 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
     log('Aplicando esquema y migraciones…');
     final mig = _run(plan.nodeExe, ['api/dist/cli/migrate.js'],
         workingDirectory: plan.baseDir,
-        env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
+        env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': jwtSecret,
           'MIGRATIONS_DIR': '${plan.baseDir}\\sql\\migrations', 'NODE_ENV': 'production'});
     if (mig.exitCode != 0) throw Exception('Migraciones fallaron: ${_tail(mig)}');
     paso('esquema', 'listo');
@@ -356,11 +357,20 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
       final r = _run(plan.nodeExe,
           ['api/dist/cli/create-admin.js', '--username', usuario, '--allow-weak'],
           workingDirectory: plan.baseDir,
-          env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
+          env: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': jwtSecret,
                 'LEXAIR_ADMIN_PASSWORD': clave, 'NODE_ENV': 'production'});
       if (r.exitCode != 0) throw Exception('create-admin falló: ${_tail(r)}');
     } else {
       paso('cuenta', 'omitido');
+    }
+    // La contraseña solo se necesita para crear la primera cuenta. No se
+    // conserva en texto claro una vez que la cuenta está creada.
+    if (users == '0' || (int.tryParse(users) ?? 0) > 0) {
+      try {
+        await retirarClaveInicial(File('$local\\VIGIA\\servidor-local.json'));
+      } catch (_) {
+        log('No se pudo retirar la contraseña inicial del archivo de configuración.');
+      }
     }
     if (users == '0') paso('cuenta', 'listo');
 
@@ -395,7 +405,7 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
         plan.nodeExe,
         ['api/dist/index.js'],
         workingDirectory: plan.baseDir,
-        environment: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
+        environment: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': jwtSecret,
             'NODE_ENV': 'production', 'PORT': '$puertoApi',
             'MAP_MANIFEST_PATH': '$mapaDir\\manifest.json',
             'TILE_SERVICE_URL': 'http://127.0.0.1:$puertoMapa'},
