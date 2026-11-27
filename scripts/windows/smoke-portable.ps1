@@ -36,16 +36,6 @@ try {
   if ($tile.StatusCode -ne 200 -or $tile.Headers['Content-Type'] -notmatch 'image/png') { throw 'El mapa portable no respondió' }
   Write-Host 'Portable descomprimido: arranque, acceso y mapa correctos.'
 } finally {
-  if ($process -and -not $process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
-  $pgctl = Join-Path $root 'servidor\pg\bin\pg_ctl.exe'
-  $data = Join-Path $local 'datos'
-  if ((Test-Path $pgctl) -and (Test-Path (Join-Path $data 'PG_VERSION'))) { & $pgctl -D $data -m fast -w stop 2>&1 | Out-Host }
-  $node = Join-Path $root 'servidor\node\node.exe'
-  Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $node } | ForEach-Object {
-    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
-  }
-  $log = Join-Path $local 'logs\arranque.log'
-  if (Test-Path $log) { Write-Host 'Diagnóstico de arranque portable:'; Get-Content $log -Tail 100 }
   try {
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
@@ -56,6 +46,16 @@ try {
     $bitmap.Save((Join-Path $env:RUNNER_TEMP 'vigia-portable.png'), [System.Drawing.Imaging.ImageFormat]::Png)
     $graphics.Dispose(); $bitmap.Dispose()
   } catch { Write-Host "Captura portable no disponible: $_" }
+  if ($process -and -not $process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
+  $pgctl = Join-Path $root 'servidor\pg\bin\pg_ctl.exe'
+  $data = Join-Path $local 'datos'
+  if ((Test-Path $pgctl) -and (Test-Path (Join-Path $data 'PG_VERSION'))) { & $pgctl -D $data -m fast -w stop 2>&1 | Out-Host }
+  $node = Join-Path $root 'servidor\node\node.exe'
+  Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $node } | ForEach-Object {
+    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+  }
+  $log = Join-Path $local 'logs\arranque.log'
+  if (Test-Path $log) { Write-Host 'Diagnóstico de arranque portable:'; Get-Content $log -Tail 100 }
   $env:LOCALAPPDATA = $oldLocal
   $env:APPDATA = $oldRoaming
 }
