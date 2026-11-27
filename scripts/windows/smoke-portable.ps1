@@ -24,7 +24,7 @@ New-Item -ItemType Directory -Force $local | Out-Null
 $process = $null
 try {
   $process = Start-Process -FilePath $app -WorkingDirectory $root -PassThru
-  New-VigiaCiAccount $process $local 'portable-ci' 'Portable-CI-3842'
+  New-VigiaCiAccount $process $local 'portable-ci' 'Ficticia-CI-3842'
   $ok = $false
   for ($i = 0; $i -lt 60; $i++) {
     Start-Sleep -Seconds 2
@@ -33,8 +33,8 @@ try {
   }
   if (-not $ok) { throw 'El portable no arrancó el servidor' }
   $configPath = Join-Path $local 'servidor-local.json'
-  if ((Test-Path $configPath) -and ((Get-Content $configPath -Raw) -match 'Portable-CI-3842|claveAdmin')) { throw 'Se guardó la clave inicial en el archivo de configuración' }
-  $body = @{ username='portable-ci'; password='Portable-CI-3842'; clientKind='windows' } | ConvertTo-Json
+  if ((Test-Path $configPath) -and ((Get-Content $configPath -Raw) -match 'Ficticia-CI-3842|claveAdmin')) { throw 'Se guardó la clave inicial en el archivo de configuración' }
+  $body = @{ username='portable-ci'; password='Ficticia-CI-3842'; clientKind='windows' } | ConvertTo-Json
   $auth = Invoke-RestMethod -Method Post -ContentType 'application/json' -Body $body 'http://127.0.0.1:3000/api/v1/auth/login'
   if (-not $auth.token) { throw 'El acceso del portable no funcionó' }
   $tile = Invoke-WebRequest -Uri 'http://127.0.0.1:3000/tiles/standard/10/284/446.png'

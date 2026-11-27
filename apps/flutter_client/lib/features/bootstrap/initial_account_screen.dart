@@ -91,7 +91,9 @@ class _InitialAccountScreenState extends State<InitialAccountScreen> {
                   enableSuggestions: _paso == 0,
                   autocorrect: _paso == 0,
                   onSubmitted: (_) => _siguiente(),
-                  decoration: InputDecoration(labelText: _paso == 0 ? 'Usuario' : 'Contraseña', errorText: _error),
+                  decoration: InputDecoration(
+                    labelText: _paso == 0 ? 'Usuario' : 'Contraseña',
+                    errorText: _error, errorMaxLines: 3),
                 ),
                 const SizedBox(height: 16),
                 FilledButton(onPressed: _siguiente, child: Text(_paso == 2 ? 'Crear cuenta' : 'Continuar')),
