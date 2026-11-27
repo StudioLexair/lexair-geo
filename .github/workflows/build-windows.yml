@@ -7,6 +7,11 @@ on:
     branches: [main]
     paths: ['apps/flutter_client/**', 'services/api/**', 'datos/**', '.github/workflows/build-windows.yml']
   workflow_dispatch:
+    inputs:
+      diagnostico:
+        description: 'Compilar solo el instalador de servidor para diagnóstico (no publicar)'
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       version:
@@ -77,6 +82,17 @@ jobs:
           if (-not (Test-Path (Join-Path $payload 'bin'))) { throw "raíz del payload PostGIS no identificada: $($ctrl.FullName)" }
           Write-Host "Payload PostGIS: $payload"
           Copy-Item "$payload\*" $pg -Recurse -Force
+          # PROTOTIPO DE DIAGNÓSTICO: libcurl necesita estas dependencias que no
+          # están incluidas en el payload. Solo se probarán en la rama de CI;
+          # antes de distribuir hay que fijar origen y licencias verificadas.
+          $gitBin = 'C:\Program Files\Git\mingw64\bin'
+          foreach ($dll in 'libbrotlidec.dll','libbrotlicommon.dll','libnghttp2-14.dll') {
+            if (-not (Test-Path (Join-Path $gitBin $dll))) { throw "Falta dependencia en runner: $dll" }
+            if (-not (Test-Path (Join-Path "$pg\bin" $dll))) {
+              Copy-Item (Join-Path $gitBin $dll) (Join-Path "$pg\bin" $dll)
+              Write-Host "Dependencia provisional para diagnóstico: $dll (Git for Windows del runner)"
+            }
+          }
           if (-not (Test-Path "$pg\share\extension\postgis.control")) { throw 'postgis.control no quedó en share/extension' }
 
           # Prueba real: clúster temporal + CREATE EXTENSION postgis
@@ -131,7 +147,9 @@ jobs:
             if (-not (Test-Path (Join-Path $rel $f))) { throw "Falta $f en el paquete" } }
           Copy-Item ..\..\infrastructure\windows\config.example.json (Join-Path $rel 'config.example.json')
           New-Item -ItemType Directory -Force ..\..\out | Out-Null
-          Compress-Archive -Path "$rel\*" -DestinationPath "..\..\out\Vigia-$ver-windows-x64-portable.zip" -Force
+          if ('${{ inputs.diagnostico }}' -ne 'true') {
+            Compress-Archive -Path "$rel\*" -DestinationPath "..\..\out\Vigia-$ver-windows-x64-portable.zip" -Force
+          }
           "VERSION=$ver" | Out-File -Append $env:GITHUB_ENV
 
       - name: Instaladores offline (Inno Setup) · Cliente / Servidor / TodoEnUno
@@ -163,12 +181,16 @@ jobs:
           Gen-Manifiesto $rel (Join-Path $man 'servidor\manifiesto.txt')
           Gen-Manifiesto $rel (Join-Path $man 'todo\manifiesto.txt')
           # Tres instaladores desde un mismo script
-          iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DOutDir=$PWD\..\..\out" "/DModo=cliente" "/DManifiestoFile=$(Join-Path $man 'cliente\manifiesto.txt')" windows\installer\lexair_geo.iss
-          if ($LASTEXITCODE -ne 0) { throw "Falló la compilación del instalador: $LASTEXITCODE" }
+          if ('${{ inputs.diagnostico }}' -ne 'true') {
+            iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DOutDir=$PWD\..\..\out" "/DModo=cliente" "/DManifiestoFile=$(Join-Path $man 'cliente\manifiesto.txt')" windows\installer\lexair_geo.iss
+            if ($LASTEXITCODE -ne 0) { throw "Falló la compilación del instalador: $LASTEXITCODE" }
+          }
           iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DServidorDir=$rel\servidor" "/DOutDir=$PWD\..\..\out" "/DModo=servidor" "/DManifiestoFile=$(Join-Path $man 'servidor\manifiesto.txt')" windows\installer\lexair_geo.iss
           if ($LASTEXITCODE -ne 0) { throw "Falló la compilación del instalador: $LASTEXITCODE" }
-          iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DServidorDir=$rel\servidor" "/DOutDir=$PWD\..\..\out" "/DModo=todo" "/DManifiestoFile=$(Join-Path $man 'todo\manifiesto.txt')" windows\installer\lexair_geo.iss
-          if ($LASTEXITCODE -ne 0) { throw "Falló la compilación del instalador: $LASTEXITCODE" }
+          if ('${{ inputs.diagnostico }}' -ne 'true') {
+            iscc.exe /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$stage" "/DServidorDir=$rel\servidor" "/DOutDir=$PWD\..\..\out" "/DModo=todo" "/DManifiestoFile=$(Join-Path $man 'todo\manifiesto.txt')" windows\installer\lexair_geo.iss
+            if ($LASTEXITCODE -ne 0) { throw "Falló la compilación del instalador: $LASTEXITCODE" }
+          }
 
       - name: Preparar diagnóstico de bibliotecas
         run: python -m pip install pefile==2024.8.26
