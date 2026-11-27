@@ -253,6 +253,9 @@ jobs:
       - name: Prueba del instalador, arranque y acceso (Windows)
         working-directory: ${{ github.workspace }}
         run: ./scripts/windows/smoke-install.ps1
+      - name: Capturar bienvenida del instalador
+        working-directory: ${{ github.workspace }}
+        run: ./scripts/windows/capture-installer.ps1
       - name: Guardar captura de diagnóstico si está disponible
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -261,6 +264,7 @@ jobs:
           path: |
             ${{ runner.temp }}/vigia-ci-pantalla.png
             ${{ runner.temp }}/vigia-ci-mapa.png
+            ${{ runner.temp }}/vigia-setup-*.png
           if-no-files-found: ignore
           retention-days: 7
 

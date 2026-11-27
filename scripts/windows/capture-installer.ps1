@@ -11,7 +11,7 @@ function Capture([string]$name) {
     $bitmap.Save((Join-Path $env:RUNNER_TEMP "vigia-setup-$name.png"), [System.Drawing.Imaging.ImageFormat]::Png)
   } finally { $g.Dispose(); $bitmap.Dispose() }
 }
-$exe = (Get-ChildItem (Join-Path $env:GITHUB_WORKSPACE 'instalador') -Filter '*Servidor-x64.exe' | Select-Object -First 1).FullName
+$exe = (Get-ChildItem (Join-Path $env:GITHUB_WORKSPACE 'out') -Filter '*Servidor-x64.exe' | Select-Object -First 1).FullName
 if (-not $exe) { throw 'Falta el instalador de servidor' }
 $installer = Start-Process -FilePath $exe -ArgumentList '/NORESTART' -PassThru
 try {
