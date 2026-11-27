@@ -24,7 +24,7 @@ $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
 try {
   $process = Start-Process -FilePath $app -WorkingDirectory $root -PassThru
   $ok = $false
-  for ($i = 0; $i -lt 120; $i++) {
+  for ($i = 0; $i -lt 45; $i++) {
     Start-Sleep -Seconds 2
     try { $health = Invoke-RestMethod -TimeoutSec 2 'http://127.0.0.1:3000/health'; $ok = $true; break } catch {}
     if ($process.HasExited) { throw "La aplicación terminó antes de arrancar: $($process.ExitCode)" }
@@ -36,6 +36,8 @@ try {
   Write-Host 'Instalador, arranque del programa y acceso mediante API: correctos'
 } finally {
   $env:PATH = $oldPath
+  Write-Host 'Diagnóstico de dependencias PE de PostGIS instalado:'
+  try { python (Join-Path $env:GITHUB_WORKSPACE 'scripts\windows\diagnose_dll.py') $root } catch { Write-Host "Diagnóstico PE no disponible: $_" }
   try {
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
