@@ -409,7 +409,7 @@ Future<bool> _esperarApi(String url, Duration timeout) async {
 Future<bool> _apiOk(String url) async {
   try {
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 3);
-    final req = await client.getUrl(Uri.parse('$url/health'));
+    final req = await client.getUrl(Uri.parse('$url/api/v1/health/live'));
     final res = await req.close().timeout(const Duration(seconds: 5));
     final ok = res.statusCode == 200;
     await res.drain<void>();

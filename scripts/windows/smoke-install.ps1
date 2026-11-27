@@ -26,7 +26,7 @@ try {
   $ok = $false
   for ($i = 0; $i -lt 45; $i++) {
     Start-Sleep -Seconds 2
-    try { $health = Invoke-RestMethod -TimeoutSec 2 'http://127.0.0.1:3000/health'; $ok = $true; break } catch {}
+    try { $health = Invoke-RestMethod -TimeoutSec 2 'http://127.0.0.1:3000/api/v1/health/live'; $ok = $true; break } catch {}
     if ($process.HasExited) { throw "La aplicación terminó antes de arrancar: $($process.ExitCode)" }
   }
   if (-not $ok) { throw 'La API no respondió dentro del límite de arranque' }
