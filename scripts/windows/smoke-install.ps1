@@ -108,4 +108,36 @@ public static class VigiaCiWindow {
   $pgctl = Join-Path $root 'servidor\pg\bin\pg_ctl.exe'
   $data = Join-Path $localDir 'datos'
   if ((Test-Path $pgctl) -and (Test-Path (Join-Path $data 'PG_VERSION'))) { & $pgctl -D $data -m fast -w stop 2>&1 | Out-Host }
+  # Solo procesos ejecutados desde esta instalación de prueba desechable.
+  $node = Join-Path $root 'servidor\node\node.exe'
+  Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $node } | ForEach-Object {
+    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+  }
+}
+
+# Reinstalar sobre la misma ruta, sin borrar datos, y comprobar la cuenta y
+# contraseña modificada del ensayo anterior (no hay datos de producción).
+$again = Start-Process -FilePath $exe -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/ROLE=red',"/DIR=$root") -Wait -PassThru
+if ($again.ExitCode -ne 0) { throw "Reinstalación falló: $($again.ExitCode)" }
+if (-not (Test-Path (Join-Path $data 'PG_VERSION'))) { throw 'La reinstalación no conservó la base de datos' }
+try {
+  $process2 = Start-Process -FilePath $app -WorkingDirectory $root -PassThru
+  $ok = $false
+  for ($i = 0; $i -lt 45; $i++) {
+    Start-Sleep -Seconds 2
+    try { Invoke-RestMethod -TimeoutSec 2 'http://127.0.0.1:3000/api/v1/health/live' | Out-Null; $ok = $true; break } catch {}
+    if ($process2.HasExited) { throw 'VIGÍA se cerró durante la prueba de reinstalación' }
+  }
+  if (-not $ok) { throw 'No arrancó tras reinstalar' }
+  $body2 = @{ username='ci-operator'; password='Changed-CI-4769'; clientKind='windows' } | ConvertTo-Json
+  $auth2 = Invoke-RestMethod -Method Post -ContentType 'application/json' -Body $body2 'http://127.0.0.1:3000/api/v1/auth/login'
+  if (-not $auth2.token) { throw 'La cuenta anterior no sobrevivió a la reinstalación' }
+  Write-Host 'Reinstalación silenciosa: datos y cuenta anterior conservados.'
+} finally {
+  if ($process2 -and -not $process2.HasExited) { Stop-Process -Id $process2.Id -Force -ErrorAction SilentlyContinue }
+  if ((Test-Path $pgctl) -and (Test-Path (Join-Path $data 'PG_VERSION'))) { & $pgctl -D $data -m fast -w stop 2>&1 | Out-Host }
+  $node = Join-Path $root 'servidor\node\node.exe'
+  Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $node } | ForEach-Object {
+    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+  }
 }
