@@ -15,8 +15,7 @@ describe('proxy de mosaicos', () => {
     await new Promise<void>((resolve) => upstream.listen(0, '127.0.0.1', resolve));
     const addr = upstream.address();
     if (!addr || typeof addr === 'string') throw new Error('Puerto de pruebas no disponible');
-    app.decorate('ctx', { cfg: { tileServiceUrl: `http://127.0.0.1:${addr.port}` } });
-    await app.register(tileProxy);
+    await app.register(tileProxy, { tileServiceUrl: `http://127.0.0.1:${addr.port}` });
     await app.ready();
   });
   afterAll(async () => { await app.close(); await new Promise<void>((r) => upstream.close(() => r())); });

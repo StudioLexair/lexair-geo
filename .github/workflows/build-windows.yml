@@ -5,7 +5,7 @@ name: build-windows
 on:
   push:
     branches: [main]
-    paths: ['apps/flutter_client/**', 'services/api/**', 'datos/**', '.github/workflows/build-windows.yml']
+    paths: ['apps/flutter_client/**', 'services/api/**', 'services/tile_service/**', 'scripts/maps/**', 'datos/**', '.github/workflows/build-windows.yml']
   workflow_dispatch:
     inputs:
       diagnostico:
@@ -22,7 +22,13 @@ permissions:
   contents: read
 
 jobs:
+  mapa:
+    uses: ./.github/workflows/build-map.yml
+    with:
+      maxzoom: '16'
+
   windows:
+    needs: mapa
     runs-on: windows-2025
     defaults:
       run:
@@ -119,6 +125,12 @@ jobs:
           Write-Host "PostgreSQL+PostGIS verificados: $ver"
           "$pg" | Out-File -Encoding ascii $env:RUNNER_TEMP\pg-dir.txt
 
+      - name: Descargar cartografía generada en esta ejecución
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: paquete-cartografico-${{ github.run_number }}
+          path: ${{ runner.temp }}/paquete-cartografico
+
       - name: Montar paquete del servidor integrado
         working-directory: ${{ github.workspace }}
         run: |
@@ -126,7 +138,7 @@ jobs:
           $rel = 'apps\flutter_client\build\windows\x64\runner\Release'
           $pg  = (Get-Content $env:RUNNER_TEMP\pg-dir.txt -Raw).Trim()
           $srv = Join-Path $rel 'servidor'
-          New-Item -ItemType Directory -Force "$srv\node","$srv\api","$srv\sql","$srv\mapa","$rel\datos_ejemplo" | Out-Null
+          New-Item -ItemType Directory -Force "$srv\node","$srv\api","$srv\sql","$srv\mapa","$srv\tiles","$rel\datos_ejemplo" | Out-Null
 
           # PostgreSQL + PostGIS verificados
           Copy-Item $pg "$srv\pg" -Recurse
@@ -146,6 +158,19 @@ jobs:
           Copy-Item 'datos\catalogo_vc\cargar_catalogo.sql' "$srv\sql\cargar_catalogo.sql"
           Copy-Item 'apps\flutter_client\windows\servidor\LEEME.txt' "$srv\LEEME.txt"
           Copy-Item 'apps\flutter_client\windows\servidor\terminologia.ejemplo.json' "$srv\terminologia.ejemplo.json"
+          # Solo paquetes reales, íntegros, producidos por el job de mapas de esta ejecución.
+          $maps = Join-Path $env:RUNNER_TEMP 'paquete-cartografico\mappkg'
+          $manifest = Get-Content (Join-Path $maps 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($manifest.isSynthetic -ne $false -or $manifest.styles.Count -ne 3 -or $manifest.maxzoom -lt 16) { throw 'Paquete cartográfico inválido' }
+          foreach ($style in $manifest.styles) {
+            if ($style.file -notmatch '^[a-z0-9_]+\.mbtiles$' -or $style.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Archivo cartográfico inválido' }
+            $file = Join-Path $maps $style.file
+            if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLower() -ne $style.sha256) { throw "SHA-256 incorrecto: $file" }
+            Copy-Item -LiteralPath $file -Destination "$srv\mapa\"
+          }
+          Copy-Item (Join-Path $maps 'manifest.json') "$srv\mapa\manifest.json"
+          Copy-Item 'services\tile_service\src' "$srv\tiles\src" -Recurse
+          Copy-Item 'services\tile_service\package.json' "$srv\tiles\package.json"
           Copy-Item 'apps\flutter_client\windows\servidor\mapa\LEEME-MAPAS.txt' "$srv\mapa\LEEME-MAPAS.txt"
           Copy-Item 'datos\ejemplo\*' "$rel\datos_ejemplo\"
           $sz = [math]::Round((Get-ChildItem $srv -Recurse | Measure-Object Length -Sum).Sum / 1MB)

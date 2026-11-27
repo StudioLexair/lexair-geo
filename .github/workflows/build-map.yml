@@ -79,7 +79,7 @@ jobs:
 
       - name: Costas (osmcoastline)
         working-directory: /tmp
-        run: osmcoastline -v -e -f -o coast.db -p land -s 4326 /tmp/cuba-latest.osm.pbf
+        run: osmcoastline -v -f -o coast.db -p land -s 4326 /tmp/cuba-latest.osm.pbf
 
       - name: Construye el paquete de mosaicos + manifest.json
         run: |
@@ -98,6 +98,15 @@ jobs:
       - name: Sumas SHA-256
         working-directory: out
         run: find . -type f ! -name '*.sha256' -exec sha256sum {} \; | sort > SHA256SUMS-mapa.txt
+
+      - name: Guardar diagnóstico del render si falla
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: diagnostico-mapa-${{ github.run_number }}
+          path: out/mappkg/*.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

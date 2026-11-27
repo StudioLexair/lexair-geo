@@ -369,13 +369,36 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
     if (reusarApi) {
       log('Servidor local ya en marcha en el puerto $puertoApi.');
     } else {
+      final mapaDir = '${plan.baseDir}\\mapa';
+      final mosaicos = '${plan.baseDir}\\tiles\\src\\server.mjs';
+      if (!File('$mapaDir\\manifest.json').existsSync() || !File(mosaicos).existsSync()) {
+        throw Exception('Falta el mapa local. Reinstale el paquete completo.');
+      }
+      // Un puerto elegido por el sistema evita usar un servicio desconocido.
+      final reserva = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final puertoMapa = reserva.port;
+      await reserva.close();
+      log('Iniciando mapa local…');
+      final procesoMapa = await Process.start(
+        plan.nodeExe, [mosaicos],
+        workingDirectory: plan.baseDir,
+        environment: {...env, 'MAP_DIR': mapaDir, 'HOST': '127.0.0.1', 'PORT': '$puertoMapa'},
+      );
+      procesoMapa.stdout.listen((_) {});
+      procesoMapa.stderr.listen((_) {});
+      if (!await _esperarPuerto(puertoMapa, const Duration(seconds: 20))) {
+        procesoMapa.kill();
+        throw Exception('No se pudo iniciar el mapa local.');
+      }
       log('Iniciando servidor local (puerto $puertoApi)…');
       await Process.start(
         plan.nodeExe,
         ['api/dist/index.js'],
         workingDirectory: plan.baseDir,
         environment: {...env, 'DATABASE_URL': dbUrl, 'JWT_SECRET': _jwtSecret,
-            'NODE_ENV': 'production', 'PORT': '$puertoApi'},
+            'NODE_ENV': 'production', 'PORT': '$puertoApi',
+            'MAP_MANIFEST_PATH': '$mapaDir\\manifest.json',
+            'TILE_SERVICE_URL': 'http://127.0.0.1:$puertoMapa'},
         mode: ProcessStartMode.detached,
       );
       if (!await _esperarApi(plan.serverUrl, const Duration(seconds: 90))) {

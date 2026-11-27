@@ -82,7 +82,7 @@ app.addContentTypeParser(['application/xml', 'text/xml'], { parseAs: 'string', b
 
   app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: 'NOT_FOUND', message: 'Ruta inexistente' }));
 
-  await app.register(tileProxy);
+  await app.register(tileProxy, { tileServiceUrl: cfg.tileServiceUrl });
 
   await app.register(async (api) => {
     for (const mod of [healthRoutes, authRoutes, personRoutes, locationRoutes, searchRoutes, geocodingRoutes,

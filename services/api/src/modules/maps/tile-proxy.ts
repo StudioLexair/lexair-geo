@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 
 // Los mosaicos son públicos (solo cartografía OSM, nunca datos personales).
 // Se limitan rutas y cabeceras: el cliente no puede elegir el destino remoto.
-export async function tileProxy(app: FastifyInstance): Promise<void> {
+export async function tileProxy(app: FastifyInstance, opts: { tileServiceUrl: string }): Promise<void> {
   app.route({
     method: ['GET', 'HEAD'],
     url: '/tiles/*',
@@ -15,7 +15,7 @@ export async function tileProxy(app: FastifyInstance): Promise<void> {
       try {
         const headers: Record<string, string> = {};
         if (req.headers['if-none-match']) headers['if-none-match'] = req.headers['if-none-match'];
-        const upstream = await fetch(`${app.ctx.cfg.tileServiceUrl}/tiles/${tail}`, {
+        const upstream = await fetch(`${opts.tileServiceUrl}/tiles/${tail}`, {
           method: req.method, headers, signal: AbortSignal.timeout(5000), redirect: 'error',
         });
         for (const h of ['content-type', 'cache-control', 'etag']) {
