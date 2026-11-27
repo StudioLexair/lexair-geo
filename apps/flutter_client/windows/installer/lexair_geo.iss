@@ -89,6 +89,10 @@ Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; Flags
 Name: "trustca"; Description: "Confiar en la CA interna de VIGÍA (si se indica un certificado)"; Check: HasCaFile
 
 [Files]
+; Los archivos temporales van primero en el bloque sólido: así el asistente
+; no necesita descomprimir todo el servidor para empezar a sonar o comparar.
+Source: "musica.wav"; DestDir: "{tmp}"; Flags: deleteafterinstall dontcopy
+Source: "{#ManifiestoFile}"; DestDir: "{tmp}"; Flags: deleteafterinstall dontcopy
 ; Programa. CI prepara SourceDir SIN la carpeta servidor (robocopy /XD), así
 ; el servidor solo entra por su propia entrada según el rol elegido.
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -96,10 +100,6 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 ; Servidor integrado (PostgreSQL+PostGIS, Node, API, SQL, mapas): solo roles «red» y «local»
 Source: "{#ServidorDir}\*"; DestDir: "{app}\servidor"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: InstalarServidor
 #endif
-; Manifiesto SHA-256 de ESTA versión (para comparar con la anterior)
-Source: "{#ManifiestoFile}"; DestDir: "{tmp}"; Flags: deleteafterinstall dontcopy
-; Música y fondo del asistente
-Source: "musica.wav"; DestDir: "{tmp}"; Flags: deleteafterinstall dontcopy
 ; Guía rápida (SmartScreen, requisitos, modos, instalación silenciosa)
 Source: "LEEME-VIGIA.txt"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -216,22 +216,28 @@ begin
   end;
 end;
 
-// Índice ordenado: ruta + TAB (no es válido en nombres Windows) + hash.
-// Find usa búsqueda binaria, evitando comparar cada archivo con todos los
-// demás al actualizar instalaciones grandes.
-function BuscarHash(const Indice: TStringList; const Ruta: string; var Hash: string): Boolean;
-var P: string; I: Integer;
+// Índices de rutas ordenadas y hashes paralelos. Las búsquedas son binarias;
+// se comprueba el índice completo antes de proponer retirar ningún archivo.
+procedure CrearIndice(const Rutas, Hashes, Indice, Valores: TStringList);
+var I, Posicion: Integer;
 begin
-  P := LowerCase(Ruta) + #9;
-  Indice.Find(P, I);
-  Result := False;
-  if I >= Indice.Count then Exit;
-  Result := Copy(Indice[I], 1, Length(P)) = P;
-  if Result then Hash := Copy(Indice[I], Length(P) + 1, MaxInt);
+  Indice.Sorted := True;
+  for I := 0 to Rutas.Count - 1 do begin
+    Posicion := Indice.Add(LowerCase(Rutas[I]));
+    Valores.Insert(Posicion, Hashes[I]);
+  end;
+end;
+
+function BuscarHash(const Indice, Valores: TStringList; const Ruta: string; var Hash: string): Boolean;
+var I: Integer;
+begin
+  I := Indice.IndexOf(LowerCase(Ruta));
+  Result := I >= 0;
+  if Result then Hash := Valores[I];
 end;
 
 function ManifiestoComparar(const RutaNueva, RutaVieja: string): Boolean;
-var NuevosR, NuevosH, ViejosR, ViejosH, NuevosIndice, ViejosIndice: TStringList;
+var NuevosR, NuevosH, ViejosR, ViejosH, NuevosIndice, ViejosIndice, NuevosValores, ViejosValores: TStringList;
     I: Integer; Hash: string;
 begin
   Result := False;
@@ -240,46 +246,29 @@ begin
   NuevosR := TStringList.Create; NuevosH := TStringList.Create;
   ViejosR := TStringList.Create; ViejosH := TStringList.Create;
   NuevosIndice := TStringList.Create; ViejosIndice := TStringList.Create;
+  NuevosValores := TStringList.Create; ViejosValores := TStringList.Create;
   try
     ManifiestoCargar(RutaNueva, NuevosR, NuevosH);
-    for I := 0 to NuevosR.Count - 1 do
-      NuevosIndice.Add(LowerCase(NuevosR[I]) + #9 + NuevosH[I]);
-    NuevosIndice.Sort;
-    NuevosIndice.Sorted := True;
+    CrearIndice(NuevosR, NuevosH, NuevosIndice, NuevosValores);
     for I := 0 to NuevosR.Count - 1 do begin
-      if not BuscarHash(NuevosIndice, NuevosR[I], Hash) then begin
-        Log('No se pudo indexar el manifiesto nuevo; no se retirarán archivos anteriores.');
-        Exit;
-      end;
-      if Hash <> NuevosH[I] then begin
-        Log('El índice del manifiesto nuevo no coincide; no se retirarán archivos anteriores.');
-        Exit;
-      end;
+      if not BuscarHash(NuevosIndice, NuevosValores, NuevosR[I], Hash) then Exit;
+      if Hash <> NuevosH[I] then Exit;
     end;
     if FileExists(RutaVieja) then begin
       ManifiestoCargar(RutaVieja, ViejosR, ViejosH);
-      for I := 0 to ViejosR.Count - 1 do
-        ViejosIndice.Add(LowerCase(ViejosR[I]) + #9 + ViejosH[I]);
-      ViejosIndice.Sort;
-      ViejosIndice.Sorted := True;
+      CrearIndice(ViejosR, ViejosH, ViejosIndice, ViejosValores);
       for I := 0 to ViejosR.Count - 1 do begin
-        if not BuscarHash(ViejosIndice, ViejosR[I], Hash) then begin
-          Log('No se pudo indexar el manifiesto anterior; no se retirarán archivos.');
-          Exit;
-        end;
-        if Hash <> ViejosH[I] then begin
-          Log('El índice del manifiesto anterior no coincide; no se retirarán archivos.');
-          Exit;
-        end;
+        if not BuscarHash(ViejosIndice, ViejosValores, ViejosR[I], Hash) then Exit;
+        if Hash <> ViejosH[I] then Exit;
       end;
       for I := 0 to NuevosR.Count - 1 do begin
-        if not BuscarHash(ViejosIndice, NuevosR[I], Hash) then
+        if not BuscarHash(ViejosIndice, ViejosValores, NuevosR[I], Hash) then
           NuevosN := NuevosN + 1
         else if Hash <> NuevosH[I] then
           CambiadosN := CambiadosN + 1;
       end;
       for I := 0 to ViejosR.Count - 1 do begin
-        if not BuscarHash(NuevosIndice, ViejosR[I], Hash) then begin
+        if not BuscarHash(NuevosIndice, NuevosValores, ViejosR[I], Hash) then begin
           ObsoletosN := ObsoletosN + 1;
           ObsoletosLista.Add(ViejosR[I]);
         end;
@@ -287,10 +276,12 @@ begin
     end else begin
       NuevosN := NuevosR.Count;
     end;
+    Log('Comparación de manifiesto: ' + IntToStr(NuevosN) + ' nuevos, ' +
+      IntToStr(CambiadosN) + ' cambiados, ' + IntToStr(ObsoletosN) + ' obsoletos.');
     Result := True;
   finally
     NuevosR.Free; NuevosH.Free; ViejosR.Free; ViejosH.Free;
-    NuevosIndice.Free; ViejosIndice.Free;
+    NuevosIndice.Free; ViejosIndice.Free; NuevosValores.Free; ViejosValores.Free;
   end;
 end;
 
@@ -410,7 +401,7 @@ begin
       Msg := Msg + '· ' + IntToStr(NuevosN) + ' fichero(s) nuevos' #13#10;
       Msg := Msg + '· ' + IntToStr(CambiadosN) + ' actualizado(s)' #13#10;
       Msg := Msg + '· ' + IntToStr(ObsoletosN) + ' de la versión anterior ya no se usan (se retirarán)';
-      MsgBox(Msg, mbInformation, MB_OK);
+      if not WizardSilent then MsgBox(Msg, mbInformation, MB_OK);
     end;
   end;
 end;
