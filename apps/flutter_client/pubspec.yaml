@@ -1,7 +1,7 @@
 name: lexair_geo
 description: "LEXAIR GEO — cliente GIS offline de Villa Clara (Studio Lexair)"
 publish_to: 'none'
-version: 0.6.0+6
+version: 0.7.0+7
 
 environment:
   sdk: ^3.14.0
