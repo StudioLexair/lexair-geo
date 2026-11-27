@@ -68,6 +68,15 @@ jobs:
             -S scripts/maps/osm2pgsql_lexair.lua --slim --cache 250 \
             --bbox -80.79,21.92,-78.79,23.47 /tmp/cuba-latest.osm.pbf
 
+      - name: Límite de Villa Clara para recortar mosaicos
+        run: |
+          set -euo pipefail
+          osmium getid -r /tmp/cuba-latest.osm.pbf r1923804 -o /tmp/vc-relacion.osm.pbf
+          osmium export /tmp/vc-relacion.osm.pbf -f geojson --geometry-types polygon -o /tmp/vc-limite.geojson
+          export PGPASSWORD=lexair_dev
+          /usr/bin/python3 scripts/maps/load_vc_boundary.py /tmp/vc-limite.geojson \
+            'postgres://lexair:lexair_dev@127.0.0.1:5432/lexair_prep'
+
       - name: Costas (osmcoastline)
         working-directory: /tmp
         run: osmcoastline -v -e -f -o coast.db -p land -s 4326 /tmp/cuba-latest.osm.pbf
