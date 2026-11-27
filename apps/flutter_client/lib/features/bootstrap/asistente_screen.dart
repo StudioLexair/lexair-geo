@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/config/terminologia.dart';
+import '../../core/config/app_config.dart';
 import '../../core/runtime/local_runtime.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -40,6 +41,7 @@ class AsistenteScreen extends StatefulWidget {
     super.key,
     required this.onDecision,
     required this.onFlag,
+    this.servidorDisponible = true,
   });
 
   /// Decide el flujo tras el asistente (local / red / saltar).
@@ -47,6 +49,7 @@ class AsistenteScreen extends StatefulWidget {
 
   /// Marca persistente «asistente completado».
   final Future<void> Function() onFlag;
+  final bool servidorDisponible;
 
   @override
   State<AsistenteScreen> createState() => _AsistenteScreenState();
@@ -187,7 +190,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
 
   Future<void> _guardarUrl(String url) async {
     final u = url.trim();
-    if (!u.startsWith('http://') && !u.startsWith('https://')) {
+    if (!AppConfig.isValidServerUrl(u)) {
       await _bot('Esa dirección no parece válida: debe empezar por http:// '
           'o https://. Inténtalo otra vez.');
       if (mounted) setState(() {});
@@ -354,7 +357,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(children: [
-        Row(children: [
+        if (widget.servidorDisponible) Row(children: [
           Expanded(
             child: _tarjetaModo(
               icono: Icons.lan_outlined,
@@ -377,7 +380,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
             ),
           ),
         ]),
-        const SizedBox(height: 10),
+        if (widget.servidorDisponible) const SizedBox(height: 10),
         _tarjetaModo(
           icono: Icons.devices_outlined,
           titulo: 'Solo cliente',
@@ -477,8 +480,8 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
                     }
                   },
             decoration: InputDecoration(
-              hintText: soloTexto
-                  ? 'Escribe tu respuesta aquí…'
+              hintText: _msgs.any((m) => m.texto.contains('cuenta inicial'))
+                  ? 'Nombre de la cuenta'
                   : 'https://… o http://…',
             ),
           ),

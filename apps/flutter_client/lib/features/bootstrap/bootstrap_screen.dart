@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../core/config/app_config.dart';
 import '../../core/config/config_store.dart';
@@ -276,9 +277,8 @@ class _VigiaRootState extends State<VigiaRoot> {
     super.initState();
     _config = widget.initialConfig;
     _services = _buildServices();
-    if (widget.plan != null && _esLocalOFabrica(_config.serverUrl)) {
-      // Primera configuración: si el asistente no se ha completado aún, es lo
-      // primero que se ve; después arranca el servidor integrado.
+    if (!kIsWeb) {
+      // El instalador solo-cliente también necesita la configuración guiada.
       _asistente = true;
       _cargarBandera();
     }
@@ -289,7 +289,7 @@ class _VigiaRootState extends State<VigiaRoot> {
     if (!mounted) return;
     setState(() {
       _asistente = !hecha;
-      _bootstrap = hecha;
+      _bootstrap = hecha && widget.plan != null && _esLocalOFabrica(_config.serverUrl);
     });
   }
 
@@ -345,7 +345,10 @@ class _VigiaRootState extends State<VigiaRoot> {
       _actualizarServicios(config);
       setState(() => _asistente = false);
     } else {
-      setState(() => _asistente = false);
+      setState(() {
+        _asistente = false;
+        _bootstrap = widget.plan != null && _esLocalOFabrica(_config.serverUrl);
+      });
     }
   }
 
@@ -353,7 +356,10 @@ class _VigiaRootState extends State<VigiaRoot> {
   Widget build(BuildContext context) {
     Widget contenido;
     if (_asistente) {
-      contenido = AsistenteScreen(onDecision: _onDecision, onFlag: () async {});
+      contenido = AsistenteScreen(
+        onDecision: _onDecision, onFlag: () async {},
+        servidorDisponible: widget.plan != null,
+      );
     } else if (_bootstrap) {
       contenido = BootstrapScreen(onDone: _onDone);
     } else {

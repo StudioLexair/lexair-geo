@@ -32,6 +32,22 @@ void main() {
     expect((decision as DecisionRed).url, 'http://192.168.1.20:3000');
   });
 
+  testWidgets('cliente sin servidor integrado solo ofrece conexión de red', (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(home: AsistenteScreen(
+      servidorDisponible: false,
+      onDecision: (_) {}, onFlag: () async {},
+    )));
+    await mensajes(tester);
+    await tester.tap(find.text('Personas'));
+    await mensajes(tester);
+    expect(find.text('Solo cliente'), findsOneWidget);
+    expect(find.text('Servidor de red'), findsNothing);
+    expect(find.text('Prueba local'), findsNothing);
+  });
+
   testWidgets('permite saltar el asistente', (tester) async {
     tester.view.physicalSize = const Size(1400, 1000);
     tester.view.devicePixelRatio = 1;
