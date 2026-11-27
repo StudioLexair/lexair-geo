@@ -129,6 +129,9 @@ if ($again.ExitCode -ne 0) {
   if (Test-Path $updateLog) { Get-Content $updateLog -Tail 60 | Out-Host }
   throw "Reinstalación falló: $($again.ExitCode)"
 }
+$comparison = Get-Content $updateLog | Where-Object { $_ -match '0 nuevos, 0 cambiados, 0 obsoletos' }
+if (-not $comparison) { throw 'La comparación de manifiestos idénticos no fue correcta' }
+Write-Host 'Manifiestos idénticos comparados sin cambios.'
 if (-not (Test-Path (Join-Path $data 'PG_VERSION'))) { throw 'La reinstalación no conservó la base de datos' }
 try {
   $process2 = Start-Process -FilePath $app -WorkingDirectory $root -PassThru
