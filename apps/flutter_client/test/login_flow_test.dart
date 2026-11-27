@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lexair_geo/core/app_services.dart';
 import 'package:lexair_geo/core/config/app_config.dart';
 import 'package:lexair_geo/core/config/config_store.dart';
@@ -12,9 +13,9 @@ import 'package:lexair_geo/features/auth/login_screen.dart';
 
 import 'fakes.dart';
 
-Widget harness(ApiClient api, AuthController auth) {
+Widget harness(ApiClient api, AuthController auth, {Future<void> Function()? onConfigChanged}) {
   final services = AppServices(config: const AppConfig(serverUrl: 'https://geo.test'), api: api,
-      configStore: ConfigStore());
+      configStore: ConfigStore(), onConfigChanged: onConfigChanged);
   return MultiProvider(
     providers: [
       Provider.value(value: services),
@@ -35,6 +36,25 @@ Widget harness(ApiClient api, AuthController auth) {
 
 void main() {
   setUp(() => TestWidgetsFlutterBinding.ensureInitialized());
+
+  testWidgets('guardar servidor aplica el cambio sin pedir reinicio', (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+    var aplicado = false;
+    final api = FakeApi().client();
+    await tester.pumpWidget(harness(api, AuthController(api, clientKind: 'windows'),
+        onConfigChanged: () async { aplicado = true; }));
+    await tester.tap(find.text('Servidor'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('server-url-field')), 'http://192.168.1.22:3000');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+    expect(aplicado, isTrue);
+    expect((await ConfigStore().load()).serverUrl, 'http://192.168.1.22:3000');
+    expect(find.textContaining('Reinicie la aplicación'), findsNothing);
+  });
 
   testWidgets('credenciales incorrectas muestran el mensaje del servidor', (tester) async {
     tester.view.physicalSize = const Size(1400, 900);

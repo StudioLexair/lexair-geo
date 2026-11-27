@@ -5,11 +5,12 @@ import 'net/api_client.dart';
 
 /// Dependencias de larga vida compartidas por toda la aplicación.
 class AppServices {
-  AppServices({required this.config, required this.api, required this.configStore}) {
+  AppServices({required this.config, required this.api, required this.configStore, this.onConfigChanged}) {
     PhotoCache.I.bind(api);
   }
 
   final AppConfig config;
   final ApiClient api;
   final ConfigStore configStore;
+  final Future<void> Function()? onConfigChanged;
 }

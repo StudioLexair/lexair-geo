@@ -6,6 +6,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/net/api_exception.dart';
 import '../../../core/config/config_store.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/auth_controller.dart';
 import '../admin_repository.dart';
 import '../admin_widgets.dart';
 
@@ -363,11 +364,20 @@ class _LocalModeCard extends StatelessWidget {
               key: const Key('local-mode-switch'),
               value: isLocal,
               onChanged: (v) async {
-                final messenger = ScaffoldMessenger.of(context);
+                final services = context.read<AppServices>();
+                final auth = context.read<AuthController>();
+                final confirmar = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+                  title: const Text('Cambiar conexión'),
+                  content: const Text('Se cerrará la sesión actual y se aplicará la nueva conexión.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                    FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continuar')),
+                  ],
+                ));
+                if (confirmar != true || !context.mounted) return;
                 await store.saveOverride(v ? 'http://localhost:3000' : null);
-                messenger.showSnackBar(SnackBar(content: Text(v
-                  ? 'Modo local activado. Reinicie la aplicación para conectar con http://localhost:3000.'
-                  : 'Modo local desactivado. Reinicie para usar el servidor configurado.')));
+                await auth.logout();
+                await services.onConfigChanged?.call();
               },
             ),
           ]),

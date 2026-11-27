@@ -16,6 +16,7 @@ class ConnectionMonitor extends ChangeNotifier {
   final ApiClient _api;
   final Duration _interval;
   Timer? _timer;
+  bool _disposed = false;
 
   ServiceState server = ServiceState.unknown;
   ServiceState database = ServiceState.unknown;
@@ -60,12 +61,14 @@ class ConnectionMonitor extends ChangeNotifier {
       if (e.isOffline) tiles = ServiceState.down;
       lastError = e.message;
     }
+    if (_disposed) return;
     lastCheck = DateTime.now();
     notifyListeners();
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _timer?.cancel();
     super.dispose();
   }

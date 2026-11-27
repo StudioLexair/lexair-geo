@@ -300,19 +300,31 @@ class _VigiaRootState extends State<VigiaRoot> {
           client: createHttpClient(caCertificatePath: _config.caCertificatePath),
         ),
         configStore: widget.store,
+        onConfigChanged: _aplicarConfiguracion,
       );
 
-  void _onDone(AppConfig config, ConfigStore store) {
+  void _actualizarServicios(AppConfig config) {
+    final anterior = _services;
     setState(() {
       _config = config;
-      _services = AppServices(
-        config: config,
-        api: ApiClient(
-          baseUrl: config.apiBase,
-          client: createHttpClient(caCertificatePath: config.caCertificatePath),
-        ),
-        configStore: store,
-      );
+      _services = _buildServices();
+    });
+    // Desmontar primero los consumidores del cliente anterior.
+    WidgetsBinding.instance.addPostFrameCallback((_) => anterior.api.close());
+  }
+
+  Future<void> _aplicarConfiguracion() async {
+    final config = await widget.store.load();
+    if (!mounted) return;
+    _actualizarServicios(config);
+    if (widget.plan != null && _esLocalOFabrica(config.serverUrl)) {
+      setState(() => _bootstrap = true);
+    }
+  }
+
+  void _onDone(AppConfig config, ConfigStore store) {
+    _actualizarServicios(config);
+    setState(() {
       _bootstrap = false;
       _asistente = false;
     });
@@ -329,18 +341,9 @@ class _VigiaRootState extends State<VigiaRoot> {
     } else if (d is DecisionRed) {
       await store.saveOverride(d.url);
       final config = await store.load();
-      setState(() {
-        _asistente = false;
-        _config = config;
-        _services = AppServices(
-          config: config,
-          api: ApiClient(
-            baseUrl: config.apiBase,
-            client: createHttpClient(caCertificatePath: config.caCertificatePath),
-          ),
-          configStore: store,
-        );
-      });
+      if (!mounted) return;
+      _actualizarServicios(config);
+      setState(() => _asistente = false);
     } else {
       setState(() => _asistente = false);
     }
@@ -354,7 +357,7 @@ class _VigiaRootState extends State<VigiaRoot> {
     } else if (_bootstrap) {
       contenido = BootstrapScreen(onDone: _onDone);
     } else {
-      contenido = LexairApp(services: _services);
+      contenido = LexairApp(key: ObjectKey(_services), services: _services);
     }
     // Las pantallas anteriores al acceso necesitan su propio MaterialApp:
     // aporta Overlay, Navigator, tema y soporte correcto para campos de texto.

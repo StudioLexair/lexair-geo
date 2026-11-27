@@ -145,13 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 );
                                 if (changed == true && context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Guardado. Reinicie la aplicación para aplicar el cambio.',
-                                      ),
-                                    ),
-                                  );
+                                  await services.onConfigChanged?.call();
                                 }
                               },
                             ),

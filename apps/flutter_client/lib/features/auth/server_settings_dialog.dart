@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../core/config/config_store.dart';
 
-/// Cambia la dirección del servidor sin recompilar. Requiere reiniciar la
-/// aplicación para recrear el cliente HTTP con la nueva dirección.
+/// Cambia la dirección del servidor sin recompilar; se aplica al guardar.
 class ServerSettingsDialog extends StatefulWidget {
   const ServerSettingsDialog({super.key, required this.config, required this.store});
   final AppConfig config;
@@ -77,7 +76,7 @@ class _ServerSettingsDialogState extends State<ServerSettingsDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            Text('El cambio se aplica al reiniciar la aplicación.',
+            Text('El cambio se aplica al guardar.',
                 style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
