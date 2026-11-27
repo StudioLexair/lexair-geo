@@ -47,11 +47,15 @@ nada para empezar a trabajar.
   Los datos se guardan en  %LOCALAPPDATA%\VIGIA\datos  (no se borran al
   desinstalar ni al actualizar) y los registros en %LOCALAPPDATA%\VIGIA\logs.
 
-· Red interna (después de la prueba)
-  Para uso real en la red del unidad, apunte el cliente al servidor central
-  (botón «Servidor» en la pantalla de acceso) y deje este servidor integrado
-  solo para la máquina de guardia o pruebas. No exponga el modo integrado a
-  la red: su clave interna es de demostración.
+· Seguridad y red (pendiente)
+  Esta compilación no está lista para producción ni para información real.
+  PostgreSQL integrado utiliza autenticación trust para conexiones locales y
+  la API no incorpora HTTPS por sí sola. La API puede escuchar en interfaces
+  de red, incluso en una prueba local; el rol de servidor abre el firewall.
+  Utilícela únicamente en un entorno de prueba aislado con datos ficticios.
+  No la exponga a Internet ni a redes no confiables. La seguridad de red,
+  las conexiones cifradas y los permisos deben completarse y probarse antes
+  del despliegue. Las sesiones se invalidan al reiniciar la API integrada.
 
 · Mapas
   Vea servidor\mapa\LEEME-MAPAS.txt para añadir la cartografía offline.

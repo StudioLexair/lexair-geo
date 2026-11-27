@@ -27,3 +27,9 @@ Después de instalar
 · Los textos de la interfaz (nombres de entidades y secciones) pueden
   personalizarse editando terminologia.json — vea LEEME.txt del servidor
   integrado o pida la plantilla a Studio Lexair.
+
+Aviso de seguridad
+------------------
+Esta compilación está en pruebas: utilice exclusivamente datos ficticios en
+un entorno aislado. No exponga el servidor a Internet ni a redes no confiables;
+la seguridad y el cifrado de la conexión de red aún no están terminados.

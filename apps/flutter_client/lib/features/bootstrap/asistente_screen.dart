@@ -141,13 +141,13 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
     _paso = 2;
     if (local) {
       if (etiqueta.startsWith('Servidor')) {
-        await _bot('Perfecto: este equipo guardará los datos y atenderá a los '
-            'demás. Base de datos y servidor van dentro del programa y los '
-            'otros equipos entran como clientes a http://IP-de-este-equipo:3000.');
+        await _bot('Este equipo puede guardar los datos y atender clientes de '
+            'red. Atención: la seguridad y la conexión cifrada aún no están '
+            'terminadas; usa solamente datos ficticios en pruebas aisladas.');
       } else {
-        await _bot('Bien: base de datos y servidor van dentro del programa, '
-            'sin red. La primera preparación tarda uno o dos minutos; las '
-            'siguientes veces abre rápido.');
+        await _bot('Bien: la base de datos y el servidor van dentro del '
+            'programa. Esta versión es de prueba; utiliza solo datos ficticios '
+            'en un equipo y una red aislados.');
       }
       await _bot('A continuación podrás crear una cuenta de acceso propia y segura.',
           espera: const Duration(milliseconds: 400));
