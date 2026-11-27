@@ -7,7 +7,15 @@ Expand-Archive -LiteralPath $zip -DestinationPath $root
 $app = Join-Path $root 'lexair_geo.exe'
 if (-not (Test-Path (Join-Path $root 'servidor\mapa\manifest.json'))) { throw 'Portable sin mapa' }
 $oldLocal = $env:LOCALAPPDATA
+$oldRoaming = $env:APPDATA
 $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'vigia-portable-local'
+$env:APPDATA = Join-Path $env:RUNNER_TEMP 'vigia-portable-roaming'
+$vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($app)
+foreach ($base in @($env:LOCALAPPDATA, $env:APPDATA, $oldLocal, $oldRoaming)) {
+  $prefs = Join-Path (Join-Path $base $vi.CompanyName) $vi.ProductName
+  New-Item -ItemType Directory -Force $prefs | Out-Null
+  '{"flutter.lexair.asistenteCompletado":true,"flutter.lexair.serverUrlOverride":"http://127.0.0.1:3000"}' | Set-Content (Join-Path $prefs 'shared_preferences.json') -Encoding utf8NoBOM
+}
 $local = Join-Path $env:LOCALAPPDATA 'VIGIA'
 New-Item -ItemType Directory -Force $local | Out-Null
 '{"usuarioAdmin":"portable-ci","claveAdmin":"Portable-CI-3842"}' | Set-Content (Join-Path $local 'servidor-local.json') -Encoding utf8NoBOM
@@ -36,5 +44,18 @@ try {
   Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $node } | ForEach-Object {
     Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
   }
+  $log = Join-Path $local 'logs\arranque.log'
+  if (Test-Path $log) { Write-Host 'Diagnóstico de arranque portable:'; Get-Content $log -Tail 100 }
+  try {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+    $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $bitmap = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height)
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+    $bitmap.Save((Join-Path $env:RUNNER_TEMP 'vigia-portable.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+    $graphics.Dispose(); $bitmap.Dispose()
+  } catch { Write-Host "Captura portable no disponible: $_" }
   $env:LOCALAPPDATA = $oldLocal
+  $env:APPDATA = $oldRoaming
 }
