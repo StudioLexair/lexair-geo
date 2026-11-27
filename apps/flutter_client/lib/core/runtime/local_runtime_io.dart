@@ -253,17 +253,26 @@ Future<LocalRuntimePlan?> ensureServidorIntegrado({
       }
       log('Base de datos propia ya en marcha.');
     } else {
-      // Process.run usa CREATE_NO_WINDOW en Windows. Con detached, pg_ctl
-      // queda sin consola y su proceso hijo puede abrir una ventana visible.
-      final inicioPg = await Process.run(
+      // El modo normal usa CREATE_NO_WINDOW en Windows. El servidor hereda
+      // las tuberías: Process.run espera su cierre y se queda bloqueado aun
+      // cuando pg_ctl ya terminó. Esperamos solo el código de pg_ctl y
+      // drenamos ambas salidas, sin esperar a que termine PostgreSQL.
+      final inicioPg = await Process.start(
         '${plan.pgBin}\\pg_ctl.exe',
         ['-D', dataDir, '-o', '-p $puertoBd', '-l', '$logDir\\postgresql.log', '-w', 'start'],
         environment: env,
-        stdoutEncoding: const Utf8Codec(allowMalformed: true),
-        stderrEncoding: const Utf8Codec(allowMalformed: true),
       );
-      if (inicioPg.exitCode != 0) {
-        throw Exception('No se pudo iniciar la base de datos: ${_tail(inicioPg)}');
+      final salidaPg = StringBuffer();
+      void guardarSalida(List<int> bytes) {
+        if (salidaPg.length < 4000) {
+          salidaPg.write(const Utf8Codec(allowMalformed: true).decode(bytes));
+        }
+      }
+      inicioPg.stdout.listen(guardarSalida);
+      inicioPg.stderr.listen(guardarSalida);
+      final codigoPg = await inicioPg.exitCode.timeout(const Duration(seconds: 75));
+      if (codigoPg != 0) {
+        throw Exception('No se pudo iniciar la base de datos: $salidaPg');
       }
     }
     if (!await _esperarPuerto(puertoBd, const Duration(seconds: 60))) {
